@@ -30,6 +30,72 @@ const PhotoStyle = (() => {
       pairing: /дожд|лив[её]н|мокр|дворник|автомоб|машин|запот|сине[ -]сер|стекл|фар/iu
     }
   };
+
+  // Concrete subjects and textures gate pinned references. Color cannot identify an object.
+  const MOTIFS = {
+    drink: /кофе|какао|чай|ча(?:я|ю|ем)(?!\p{L})|чашк|кружк|coffee|cocoa|\btea\b|\bmug\b/iu,
+    "personal-audio": /наушник|earpods|earbuds|headphones|earphones/iu,
+    camera: /камер|фотоаппарат|пл[её]нк|снял[аи]?|снимал[аи]?|camera|digicam|film roll/iu,
+    fabric: /ткан|плед|ш[её]лк|льнян|свитер|вязан|мягк[а-яё]* ткан|soft-fabric|linen|fabric|satin|sweater/iu,
+    shoes: /балетк|туфл|босонож|т[ао]п[о]ч|обув|носк|башмак|shoes|slippers|ballet flats/iu,
+    reading: /чита[люте]|книг|учебник|проч[её]л|book|reading|library/iu,
+    school: /тетрад|экзам|контрольн|зач[её]т|конспект|уч[её]б|урок|занят[ие]|оценк|\bschool\b|classwork|notebook|exam/iu,
+    paper: /бумаг|лист[а-яё]* с (?:текстом|заметк)|записк|crumpled-paper|handwritten|notes|\bpaper\b/iu,
+    desk: /за столом|на стол[еуа]|рабоч[а-яё]+ стол|письменн[а-яё]+ стол|клавиатур|\bdesk\b|workspace/iu,
+    glasses: /очк[иаов]|оправ|eyeglasses|spectacles|reading glasses/iu,
+    neighborhood: /двор(?!ник)[а-яё]*|переул|между домами|около дома|частн[а-яё]+ дом|деревн|пригород|пуст[а-яё]+ город|night-city|country-house|suburban|neighbou?rhood|courtyard/iu,
+    street: /улиц|дорог|асфальт|переул|прогул|long-walk|sidewalk|\bstreet\b|\broad\b/iu,
+    fog: /туман|дымк|мгл|рассеянн[а-яё]+ свет|\bfog\b|mist|hazy/iu,
+    wet: /мокр|луж|сыр[а-яё]+ асфальт|влажн|puddles?|\bwet\b/iu,
+    rain: /дожд(?:ь|я|ю|[её]м|лив[а-яё]+)|лив[её]н|капли|warm-rain|rain-window|raindrops?|\brain\b/iu,
+    glass: /стекл|дворник|из окна|за окном|через окно|витрин|cold-glass|through-window|windshield|through (?:the )?window|windowpane/iu,
+    car: /машин|автомоб|такси|дворник|из салона|в салоне|windshield|\bcars?\b|\btaxi\b/iu,
+    trees: /дерев[а-яё]+|листв|хво[йя]|топол|trees|foliage/iu,
+    lamps: /фонар|фары|уличн[а-яё]+ свет|streetlights?|headlights?/iu
+  };
+
+  function motifsFor({text, pictures, quiz}) {
+    const answers = quiz?.answers || {};
+    const answersText = [answers.place, answers.weather, answers.scene, answers.rhythm, answers.texture,
+      answers.sound, answers.colors, answers.memory, answers.unspoken].map(answer).join(' ');
+    const captions = Array.isArray(pictures)
+      ? pictures.map(picture => typeof picture?.label === 'string' ? picture.label : '').join(' ')
+        .replace(/[_-]/g, ' ')
+      : '';
+    const sources = [[text, 1.9], [answersText, 1.35], [captions, 1]];
+    return Object.fromEntries(Object.entries(MOTIFS).map(([key, pattern]) =>
+      [key, Math.min(3, sources.reduce((score, [value, weight]) =>
+        score + (typeof value === 'string' && pattern.test(value) ? weight : 0), 0))]));
+  }
+
+  function colorChoice(answers) {
+    const colors = Array.isArray(answers.colors) ? answers.colors.map(value => readColor(value?.hex)).filter(Boolean) : [];
+    return colors.length ? Object.fromEntries(Object.keys(colors[0]).map(key => [key, mean(colors.map(color => color[key]))])) : null;
+  }
+
+  function colorAffinity(photo, sampleHex) {
+    const sample = readColor(sampleHex);
+    if (!photo || !sample) return 0;
+    const distance = Math.abs(photo.brightness - sample.brightness) * .96
+      + Math.abs(photo.spread - sample.spread) * .50
+      + Math.abs(photo.warm - sample.warm) * .26
+      + Math.abs(photo.olive - sample.olive) * .20
+      + Math.abs(photo.blue - sample.blue) * .30;
+    return clamp(1 - distance);
+  }
+
+  const styleMotifs = {
+    ivory: {drink:.50, "personal-audio":.28, camera:.32, fabric:.50, shoes:.62},
+    fog: {neighborhood:.51, street:.37, fog:.72, trees:.20, lamps:.16},
+    graphite: {school:.66, reading:.48, paper:.40, desk:.27, glasses:.46},
+    rain: {rain:.57, glass:.48, car:.46, wet:.26}
+  };
+
+  function sceneScore(key, motifs) {
+    return Math.min(2.65, Object.entries(styleMotifs[key]).reduce((total, [motif, weight]) =>
+      total + motifs[motif] * weight, 0));
+  }
+
   const KEYS = Object.keys(STYLES);
   const clamp = value => Math.max(0, Math.min(1, value));
   const mean = values => values.reduce((sum, value) => sum + value, 0) / values.length;
@@ -79,7 +145,7 @@ const PhotoStyle = (() => {
     if (typeof value === 'string') return value;
     if (Array.isArray(value)) return value.map(answer).join(' ');
     if (!value || typeof value !== 'object') return '';
-    return [value.custom, value.label, value.id, value.value].filter(item => typeof item === 'string').join(' ');
+    return [value.custom || value.label, value.id, value.value, value.association].filter(item => typeof item === 'string').join(' ');
   }
 
   function contextScore(style, value) {
@@ -121,7 +187,10 @@ const PhotoStyle = (() => {
     const story = typeof text === 'string' && text.trim() ? text : result?.title;
     const quizText = [answers.place, answers.weather, answers.scene, answers.rhythm, answers.texture, answers.sound, answers.colors]
       .map(answer).join(' ');
+    const chosen = colorChoice(answers);
+    const motifs = motifsFor({text, pictures, quiz});
     const scores = photoScores(photo);
+    const paletteScores = photoScores(chosen);
     const winner = KEYS.map(key => {
       const style = STYLES[key];
       const textWeight = contextScore(style, story);
@@ -133,7 +202,10 @@ const PhotoStyle = (() => {
       }
       if (track?.tone === 'cool' && (key === 'rain' || key === 'fog')) music += .08;
       if (track?.tone === 'warm' && key === 'ivory') music += .09;
-      return {key, score: scores[key] + textWeight * (photo ? .66 : 1) + quizWeight * (photo ? .65 : .96) + music, textWeight, quizWeight};
+      const score = scores[key] + paletteScores[key] * (photo ? .13 : .27)
+        + textWeight * (photo ? .66 : 1) + quizWeight * (photo ? .65 : .96)
+        + sceneScore(key, motifs) + music;
+      return {key, score, textWeight, quizWeight};
     }).sort((a, b) => b.score - a.score)[0];
     const fixed = typeof reference === 'string' ? reference : reference?.styleKey || reference?.key || reference?.photoStyle?.key || reference?.photoStyle;
     const fixedStyle = typeof fixed === 'string' && Object.prototype.hasOwnProperty.call(STYLES, fixed);
@@ -152,8 +224,8 @@ const PhotoStyle = (() => {
     } else {
       reason = 'Приглушённый стиль для этой страницы — ' + style.explanation + '.';
     }
-    return {key, name: style.name, reason, query: style.query};
+    return {key, name: style.name, reason, query: style.query, motifs, photo, chosen};
   }
 
-  return {select};
+  return {select, colorAffinity};
 })();

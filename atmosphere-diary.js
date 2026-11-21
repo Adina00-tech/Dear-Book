@@ -56,8 +56,18 @@ const AtmosphereDiary = (() => {
     const fast = rhythm === "fast-chaotic" || rhythm === "montage" || style === "montage";
     const slow = rhythm === "slow-blurred" || rhythm === "monotone" || style === "still" || style === "drift";
     const factor = fast ? .74 : slow ? 1.26 : 1;
-    return {style,texture,interval:Math.min(14,Math.max(1.6,result.rhythm*factor)),
-      motion:fast?"crisp":slow?"soft":result.energy>.64?"crisp":result.energy<.40?"soft":"balanced"};
+    const pacing = SongVibe.pacing(day.track);
+    const hasBeat = Number.isFinite(pacing.beatMs) && pacing.beatMs > 0;
+    const base = (Number.isFinite(pacing.frameMs) && pacing.frameMs > 0 ? pacing.frameMs/1000 : result.rhythm) * factor;
+    const bounded = Math.min(14,Math.max(1.6,base));
+    const seconds = hasBeat ? pacing.beatMs/1000 : 0;
+    const minimum = hasBeat ? Math.ceil(1.6/seconds) : 0;
+    const maximum = hasBeat ? Math.max(minimum,Math.floor(14/seconds)) : 0;
+    const interval = hasBeat ? seconds*Math.max(minimum,Math.min(maximum,Math.round(bounded/seconds))) : bounded;
+    const transition = Number.isFinite(pacing.transitionMs) ? pacing.transitionMs/1000 : interval/4;
+    const motion = fast || (!slow && pacing.pace === "fast") ? "crisp" : slow || pacing.pace === "slow" ? "soft" :
+      result.energy>.64 ? "crisp" : result.energy<.40 ? "soft" : "balanced";
+    return {style,texture,interval,transition:Math.min(1.7,Math.max(.25,transition)),motion};
   }
 
   function node(tag, className, value) {
@@ -84,7 +94,8 @@ const AtmosphereDiary = (() => {
     return {
       schemaVersion:1,date:day.date,questions:day.quiz,
       writtenEntry:day.text || "",photos:(day.pictures||[]).map(({label,signals},i)=>({index:i+1,label,signals})),
-      music:{title:day.track?.title,tempo,energy,tone,method,description:song?.description},
+      music:{title:day.track?.title,tempo,energy,tone,method,description:song?.description,
+        rhythm:SongVibe.pacing(day.track),connection:song?.connection},
       atmosphere:profile,localAI:day.atmosphereAI || null
     };
   }

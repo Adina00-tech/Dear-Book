@@ -3,48 +3,39 @@ const FeelingNarrative = (() => {
   const FEELINGS = [
     {
       label: 'облегчение', phrase: 'напряжение отпускает',
-      express: ['облегч', 'выдох', 'отпуст', 'отлег'],
-      detail: ['закончил', 'завершил', 'справил', 'успел', 'сдали']
+      express: ['облегч', 'выдохнул', 'отпустило', 'отлегло']
     },
     {
       label: 'напряжение', phrase: 'чувствуется напряжение',
-      express: ['нерв', 'трево', 'напряг', 'напряж', 'страш', 'боял', 'волнова', 'злил', 'сердил'],
-      detail: ['дедлайн', 'тороп', 'спеш', 'сроч', 'гонк', 'сдач']
+      express: ['нервнич', 'тревожно', 'тревога', 'напрягл', 'напряжённо', 'напряженно', 'страшно', 'боял', 'волновал', 'злил', 'сердил']
     },
     {
       label: 'радость', phrase: 'слышится лёгкость и радость',
-      express: ['радов', 'радост', 'радует', 'рады', 'рада', 'весёл', 'весел', 'счастл', 'смея', 'смешно', 'улыб', 'восторг'],
-      detail: ['праздник', 'танц', 'побед', 'сюрприз', 'концерт', 'подар']
+      express: ['радов', 'радост', 'радует', 'рады', 'рада', 'весело', 'счастл', 'в восторге']
     },
     {
       label: 'тепло', phrase: 'проступают тепло и близость',
-      express: ['уют', 'утеш', 'нежн', 'родн', 'спокойно рядом'],
-      detail: ['обня', 'обним', 'какао', 'свеч', 'разговор', 'разговар', 'бабуш', 'дедуш', 'тепл']
+      express: ['уютно', 'почувствовал тепло', 'было тепло рядом', 'спокойно рядом']
     },
     {
       label: 'усталость', phrase: 'чувствуется усталость',
-      express: ['устал', 'вымот', 'изнемог', 'истощ', 'тяжело'],
-      detail: ['недосып', 'переработ', 'бессон', 'из сил']
+      express: ['устал', 'вымотал', 'изнемог', 'истощён', 'истощен', 'тяжело на душе']
     },
     {
       label: 'тихая грусть', phrase: 'слышится тихая грусть',
-      express: ['груст', 'тоск', 'одинок', 'печал', 'плак', 'скучаю', 'скучал'],
-      detail: ['прощ', 'расстал', 'утрат', 'опустел', 'одиноч']
+      express: ['грустно', 'грустил', 'тоскливо', 'тоска', 'одиноко', 'одиноким', 'одинокой', 'печально', 'печаль', 'плакал', 'скучаю', 'скучал']
     },
     {
       label: 'покой', phrase: 'появляется ощущение покоя',
-      express: ['спокой', 'умиротвор', 'безмятеж', 'расслаб', 'нетороп', 'тих'],
-      detail: ['тишин', 'замедл', 'молч', 'пауза', 'вдох']
+      express: ['было спокойно', 'мне спокойно', 'я спокой', 'успокоил', 'умиротвор', 'расслабил', 'почувствовал покой', 'почувствовала покой']
     },
     {
       label: 'простор', phrase: 'появляется ощущение свежести и простора',
-      express: ['свеж', 'простор', 'свобод', 'легко дыш'],
-      detail: ['лес', 'луг', 'трава', 'траву', 'берег', 'ветер', 'озер', 'озёр', 'рассвет', 'горн', 'зелень']
+      express: ['чувствовал свободу', 'чувствовала свободу', 'мне было свободно', 'стало легче дышать']
     },
     {
       label: 'задумчивость', phrase: 'слышится задумчивость',
-      express: ['задум', 'размышл', 'вспомн', 'ностальг', 'мечтал'],
-      detail: ['воспомин', 'сумерк', 'полноч', 'луну', 'туман']
+      express: ['задумал', 'ностальг', 'мечтал']
     }
   ];
   const BREAKS = /[.!?…\n]+|[;,—]\s*(?=(?:но|зато|хотя|потом|позже|наконец|к вечеру|к ночи|под конец|в итоге|утром|вечером)(?=$|[ ,.!?…\s]))/giu;
@@ -68,26 +59,51 @@ const FeelingNarrative = (() => {
     return (left ? '…' : '') + '«' + text.slice(left, right).trim() + '»' + (right < text.length ? '…' : '');
   }
 
+  function userAnswer(value) {
+    return typeof value === 'string' ? value.trim() : String(value?.custom || value?.label || '').trim();
+  }
+
   function findFeeling(value) {
-    const tokens = [...value.toLowerCase().matchAll(/[\p{L}]+/gu)];
+    const fragments = [...value.matchAll(/[^.,;!?…\n]+/gu)];
     const scores = FEELINGS.map(feeling => {
       let score = 0;
       let first = null;
-      let explicit = false;
-      for (let i = 0; i < tokens.length; i += 1) {
-        if (NEGATORS.has(tokens[i - 1]?.[0]) ||
-            (NEGATORS.has(tokens[i - 2]?.[0]) && ['очень', 'так', 'слишком', 'особо', 'очень-то'].includes(tokens[i - 1]?.[0]))) continue;
-        if (tokens[i][0] === 'ради' || tokens[i][0].startsWith('радио')) continue;
-        const rest = tokens.slice(i, i + 4).map(token => token[0]).join(' ');
-        const direct = feeling.express.some(cue => rest.startsWith(cue)) || (feeling.label === 'радость' && tokens[i][0] === 'рад');
-        if (!direct && !feeling.detail.some(cue => rest.startsWith(cue))) continue;
-        score += direct ? 4 : 1.35;
-        if (first == null || (direct && !explicit)) first = tokens[i].index;
-        explicit = explicit || direct;
+      for (const fragment of fragments) {
+        const tokens = [...fragment[0].toLowerCase().matchAll(/[\p{L}]+/gu)];
+        const clause = tokens.map(token => token[0]).join(' ');
+        const sound = /(?:песн|мелоди|трек|музык|саунд|звучал|клип|ритм|сни[мо]к|фото)/iu.test(clause);
+        const person = /(?:^| )(?:мне|меня|нам|нас|себя)(?: |$)|(?:чувствова|ощуща|пережива)/iu.test(clause);
+        for (let i = 0; i < tokens.length; i += 1) {
+          const previous = tokens.slice(Math.max(0, i - 4), i).map(token => token[0]);
+          const afterBreak = previous.findLastIndex(word => ['но', 'зато', 'однако', 'потом'].includes(word));
+          if (previous.slice(afterBreak + 1).some(word => NEGATORS.has(word))) continue;
+          const rest = tokens.slice(i, i + 4).map(token => token[0]).join(' ');
+          const matched = feeling.express.some(cue => rest.startsWith(cue))
+            || (feeling.label === 'радость' && tokens[i][0] === 'рад');
+          if (!matched || (sound && !person && !/(?:грустил|плакал|нервнич|радов|измож|вымотал|боял)/u.test(tokens[i][0]))) continue;
+          score += 1;
+          if (first == null) first = fragment.index + tokens[i].index;
+        }
       }
-      return {...feeling, score, first, explicit};
-    }).filter(feeling => feeling.score > 0).sort((a, b) => b.score - a.score || a.first - b.first);
-    return scores;
+      return {...feeling, score, first, explicit: score > 0};
+    });
+    return scores.filter(feeling => feeling.score > 0).sort((a, b) => b.score - a.score || a.first - b.first);
+  }
+
+  function textForContext(text, quiz) {
+    const answers = quiz?.answers || {};
+    const body = visibleText(text);
+    return [...new Set([body, userAnswer(answers.memory), userAnswer(answers.unspoken)].filter(Boolean))].join('\n');
+  }
+
+  function context({text, quiz} = {}) {
+    const body = textForContext(text, quiz);
+    const plan = textPlan(body);
+    if (!plan.primary) return null;
+    const label = plan.transition
+      ? plan.transition.from + ' и ' + plan.transition.to
+      : plan.secondary ? plan.primary.label + ' и ' + plan.secondary.label : plan.primary.label;
+    return {label: label.charAt(0).toUpperCase() + label.slice(1), quote: sourceQuote(body, plan.primary.first).replace(/^…?«|»…?$/gu, '')};
   }
 
   function sourceQuote(text, at = 0) {
@@ -110,7 +126,8 @@ const FeelingNarrative = (() => {
       const from = findFeeling(left)[0];
       const to = findFeeling(right)[0];
       if (!from || !to || from.label === to.label || (!from.explicit && !to.explicit)) continue;
-      const kind = TEMPORAL.test(marker.groups.bridge.toLowerCase()) ? 'shift' : 'contrast';
+      const isShift = TEMPORAL.test(marker.groups.bridge.toLowerCase()) || /^\s*(?:позже|потом|затем|наконец)(?=$|[\s,.!?])/iu.test(right);
+      const kind = isShift ? 'shift' : 'contrast';
       return {
         primary, secondary: null,
         evidence: sourceQuote(left, from.first) + (kind === 'shift' ? ' → ' : ' · ') + sourceQuote(right, to.first),
@@ -157,15 +174,15 @@ const FeelingNarrative = (() => {
     }
     if (hue < 20 || hue >= 346) {
       const base = soft ? (dark ? 'сдержанное тепло' : 'приглушённое тепло')
-        : dark ? 'собранность и внутреннее напряжение' : pale ? 'тепло и оживление' : 'волнение и импульс';
+        : dark ? 'глубина красного' : pale ? 'мягкий тёплый акцент' : 'выразительный красный акцент';
       return {base, light, color: soft ? 'приглушённый тёплый оттенок' : 'красный акцент'};
     }
     if (hue < 47) return {base: dark ? 'тихое, камерное тепло' : 'уют и близость', light, color: 'тёплый янтарный оттенок'};
-    if (hue < 75) return {base: dark ? 'тепло в тени' : 'открытость и лёгкая радость', light, color: 'золотистый свет'};
-    if (hue < 167) return {base: dark ? 'покой, как в тени деревьев' : 'свежесть и свободное дыхание', light, color: 'зелёный оттенок'};
+    if (hue < 75) return {base: dark ? 'тепло в тени' : 'ясность и золотистый свет', light, color: 'золотистый свет'};
+    if (hue < 167) return {base: dark ? 'прохлада, как в тени деревьев' : 'свежесть и свободное дыхание', light, color: 'зелёный оттенок'};
     if (hue < 198) return {base: dark ? 'прохлада и сосредоточенность' : 'прохлада и свежесть', light, color: 'бирюзовый оттенок'};
-    if (hue < 248) return {base: dark ? 'покой с лёгкой грустью' : 'прохлада, воздух и тишина', light, color: 'синий оттенок'};
-    if (hue < 306) return {base: dark ? 'сумеречная задумчивость' : 'мечтательность и лёгкая отстранённость', light, color: 'фиолетовый оттенок'};
+    if (hue < 248) return {base: dark ? 'прохладная глубина теней' : 'прохлада и рассеянный свет', light, color: 'синий оттенок'};
+    if (hue < 306) return {base: dark ? 'глубина сумеречных тонов' : 'мягкий сиреневый свет', light, color: 'фиолетовый оттенок'};
     return {base: dark ? 'сдержанная теплота' : 'тепло и живой акцент', light, color: 'розовый оттенок'};
   }
 
@@ -211,17 +228,20 @@ const FeelingNarrative = (() => {
     return {known: clues.length > 0, evidence: clues.join(' · '), meaning: spec.base, detail: [lead, movement].filter(Boolean).join(' ')};
   }
 
-  function explain({text, result = {}, track, song, photos, reference = false} = {}) {
+  function explain({text, result = {}, track, song, photos, quiz, reference = false} = {}) {
     const existing = Array.isArray(result.palette) ? result.palette : [];
-    const body = visibleText(text);
+    const body = textForContext(text, quiz);
     const plan = textPlan(body);
     const words = colorShape(existing[0]?.hex);
     const photo = photoPlan(photos, result, existing[1]);
     const music = songPlan(track, song, result, existing[2]);
     const textLight = body ? words.color[0].toUpperCase() + words.color.slice(1) + ' передаёт ' +
       words.light + '.' : 'Текст добавит оттенок настроения.';
-    const textMeaning = plan.transition ? plan.transition.from + ' и ' + plan.transition.to
-      : plan.secondary ? plan.primary.label + ' и ' + plan.secondary.label : plan.primary?.label || words.base;
+    const choice = Array.isArray(quiz?.answers?.colors) ? quiz.answers.colors[0] : null;
+    const chosenAssociation = typeof choice?.association === 'string' ? choice.association.trim() : '';
+    const observedFeeling = plan.transition ? plan.transition.from + ' и ' + plan.transition.to
+      : plan.secondary ? plan.primary.label + ' и ' + plan.secondary.label : plan.primary?.label || '';
+    const textMeaning = chosenAssociation || observedFeeling || words.base;
     const pieces = [
       {name: 'Текст', meaning: textMeaning, detail: textLight, evidence: plan.evidence},
       {name: 'Фото', meaning: photo.meaning, detail: photo.detail, evidence: photo.evidence},
@@ -245,7 +265,7 @@ const FeelingNarrative = (() => {
       lines.push('В записи меняется настроение. Сначала слышится ' + plan.transition.from +
         ', а позже ' + plan.transition.to + '.');
     } else if (plan.transition || plan.secondary) {
-      lines.push('В одном дне соседствуют ' + textMeaning + '.');
+      lines.push('В записи соседствуют ' + observedFeeling + '.');
     } else if (plan.primary && plan.evidence) {
       lines.push('В деталях ' + plan.evidence + ' ' + plan.primary.phrase + '.');
     } else if (body && plan.evidence) {
@@ -260,8 +280,8 @@ const FeelingNarrative = (() => {
         : Number.isFinite(result.rhythm) && result.rhythm < 3.0 ? 'ускоряет смену кадров' : 'задаёт ровный ход кадров';
       lines.push('Музыка ' + (track?.silent || song?.silent ? 'оставляет паузу между кадрами' : pace) + '.');
     }
-    return {summary: lines.join(' ') || result.description || '', palette, layers, transition: plan.transition};
+    return {summary: lines.join(' ') || (result.paletteVersion === 2 ? result.description : '') || '', palette, layers, transition: plan.transition};
   }
 
-  return {explain};
+  return {explain, context};
 })();

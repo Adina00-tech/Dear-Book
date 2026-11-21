@@ -15,7 +15,6 @@ const state = {
   loadingPhotos: false,
   previewTimer: 0,
   wheelTimer: 0,
-  slideTimer: 0,
   playbackUrl: "",
   voiceRun: 0,
   db: null,
@@ -27,7 +26,7 @@ const wheelGuide = [
   ["#cc9869", "Янтарный", "уют вечера или тепло, которое хочется удержать"],
   ["#cac187", "Жёлтый", "лёгкость утра или яркая деталь на тихом фоне"],
   ["#85a693", "Зелёный", "свежесть после дождя или пауза, чтобы выдохнуть"],
-  ["#465e80", "Тёмно-синий", "грусть, уединение или спокойствие после суеты"],
+  ["#465e80", "Тёмно-синий", "прохладный свет, глубина или тихая пауза"],
   ["#8d83a9", "Лиловый", "мечтательность или ощущение незаконченного дня"]
 ];
 
@@ -139,20 +138,22 @@ async function makeExample(sample, index) {
   };
 }
 
-function analysis(text, pictures, track) {
-  return Engine.analyze({text,photos:pictures.map((picture) => picture.signals),track});
+function analysis(text, pictures, track, quiz, song = readingFor(track,{text,quiz})) {
+  return Engine.analyze({text,photos:pictures.map((picture) => picture.signals).filter(Boolean),track,quiz,song});
 }
 
-function readingFor(track) {
+function readingFor(track, context) {
   if (!track) return null;
-  return track.vibe || SongVibe.describe(track);
+  const reading = SongVibe.describe(track,context);
+  return track.vibe ? {...reading,...track.vibe,connection:reading.connection,connectionKind:reading.connectionKind} : reading;
 }
 
-function explainFeelings(day, song = readingFor(day.track)) {
+function explainFeelings(day, song = readingFor(day.track,day)) {
   return FeelingNarrative.explain({
     text:day.text,
     result:day.result,
     track:day.track,
+    quiz:day.quiz,
     song,
     photos:day.pictures?.map((picture) => picture.signals).filter(Boolean),
     reference:day.reference
@@ -189,6 +190,7 @@ function songReading(vibe) {
   const label = node("strong");
   label.append(chip(vibe.hue), document.createTextNode(vibe.label));
   box.append(label, node("p", "", vibe.description), node("small", "", vibe.evidence));
+  if (vibe.connection) box.append(node("p","song-connection",vibe.connection));
   return box;
 }
 
@@ -222,8 +224,11 @@ function hasQuizAnswers() {
 
 function refreshQuizButton() {
   const complete = Boolean(state.quiz?.completed);
-  $("openAtmosphere").textContent = complete ? "Изменить ответы" : hasQuizAnswers() ? "Продолжить тест" : "Описать день образами";
-  $("atmosphereState").textContent = complete ? "Ответы войдут в мудборд" : hasQuizAnswers() ? "Черновик сохранён" : "10 вопросов";
+  const open = $("openAtmosphere");
+  open.classList.toggle("aqua",!complete);
+  open.classList.toggle("silver",complete);
+  open.textContent = complete ? "Изменить ответы" : hasQuizAnswers() ? "Продолжить тест" : "Пройти тест атмосферы";
+  $("atmosphereState").textContent = complete ? "Тест пройден · можно собрать день" : hasQuizAnswers() ? "Черновик сохранён · закончи тест" : "Обязательный шаг · 10 вопросов";
 }
 
 function rememberQuiz(snapshot) {
@@ -247,27 +252,46 @@ function bindAtmosphere() {
     },
     onClose:() => dialog.close()
   });
+  state.quiz = state.quizView.getValue();
   refreshQuizButton();
-  $("openAtmosphere").addEventListener("click",() => {
-    dialog.showModal();
-    dialog.querySelector(".quiz-question")?.focus();
-  });
+  $("openAtmosphere").addEventListener("click",openAtmosphere);
+}
+
+function openAtmosphere() {
+  const dialog = $("atmosphereDialog");
+  if (dialog.open) return;
+  dialog.showModal();
+  dialog.querySelector(".quiz-question")?.focus();
+}
+
+function renderSongPreview(reading) {
+  const preview = $("songPreview");
+  preview.hidden = !reading;
+  preview.replaceChildren();
+  if (!reading) return;
+  const caption = node("strong","song-preview-title");
+  caption.append(chip(reading.hue),document.createTextNode(reading.label));
+  preview.append(caption,node("p","",reading.description));
+  if (reading.connection) preview.append(node("p","song-connection",reading.connection));
 }
 
 function updateWheel() {
   const text = $("story").value.trim();
   $("resetEntry").hidden = !text && !state.pictures.length && !state.track && !state.loadingPhotos && !hasQuizAnswers();
   if (!text && !state.pictures.length && !state.track && !state.quiz?.completed) {
+    renderSongPreview(null);
     MoodTheme.apply(document.documentElement, null, null);
     $("wheel").style.removeProperty("--wheel-colors");
     $("wheelHint").textContent = "Смысл цвета меняется вместе с записью";
     renderLegend(wheelGuide);
     return;
   }
-  const source = AtmosphereDiary.answerText(state.quiz,text);
-  const preview = analysis(source,state.pictures,state.track || undefined);
-  const vibe = readingFor(state.track);
-  const draft = {text,result:preview,track:state.track,pictures:state.pictures,quiz:state.quiz};
+  const quiz = state.quiz?.completed ? state.quiz : null;
+  const source = AtmosphereDiary.answerText(quiz,text);
+  const vibe = readingFor(state.track,{text,quiz});
+  const preview = analysis(source,state.pictures,state.track || undefined,quiz,vibe);
+  renderSongPreview(vibe);
+  const draft = {text,result:preview,track:state.track,pictures:state.pictures,quiz};
   const profile = AtmosphereDiary.localProfile(draft,vibe);
   const colors = profile?.palette?.length ? profile.palette : explainFeelings(draft,vibe).palette;
   const themed = {...preview,palette:colors};
@@ -287,15 +311,6 @@ function updateInputs() {
   $("photoLabel").textContent = state.pictures.length ? "Фото · " + state.pictures.length : "Добавить фото";
   $("songLabel").textContent = state.track ? state.track.title : "Добавить песню";
   $("removeMusic").hidden = !state.track;
-  const songPreview = $("songPreview");
-  const reading = readingFor(state.track);
-  songPreview.hidden = !reading;
-  songPreview.replaceChildren();
-  if (reading) {
-    const caption = node("strong", "song-preview-title");
-    caption.append(chip(reading.hue), document.createTextNode(reading.label));
-    songPreview.append(caption, node("p", "", reading.description));
-  }
   const strip = $("photoStrip");
   strip.hidden = !state.pictures.length;
   strip.replaceChildren(...state.pictures.map((picture, index) => {
@@ -369,7 +384,7 @@ function renderArchive() {
 }
 
 async function addDayPin(day, id) {
-  const current = day.pinterest || PinterestMood.snapshot(day);
+  const current = day.pinterest || PinterestMood.snapshot(day,state.entries);
   const updated = {...current, extras:[...(current.extras || []),id]};
   day.pinterest = updated;
   if (day.demo || !state.storageReady) return false;
@@ -382,7 +397,7 @@ async function addDayPin(day, id) {
 }
 
 async function saveAtmosphereReading(day,reading) {
-  day.atmosphereAI = reading;
+  day.atmosphereAI = {...reading,interpretationVersion:2};
   if (!day.demo && state.storageReady) {
     try {
       await dbAction("readwrite",(store) => store.put(day));
@@ -406,16 +421,15 @@ function showResult(day, scroll = true) {
   state.current = day;
   state.voiceRun++;
   if ("speechSynthesis" in window) speechSynthesis.cancel();
-  clearInterval(state.slideTimer);
   $("result").querySelector("audio")?.pause();
   if (state.playbackUrl) URL.revokeObjectURL(state.playbackUrl);
   state.playbackUrl = "";
 
   const {result} = day;
-  const songVibe = readingFor(day.track);
+  const songVibe = readingFor(day.track,day);
   const feelings = explainFeelings(day,songVibe);
   const profile = AtmosphereDiary.localProfile(day,songVibe);
-  const ai = profile ? day.atmosphereAI : null;
+  const ai = profile && day.atmosphereAI?.interpretationVersion === 2 ? day.atmosphereAI : null;
   const palette = atmosphereColors(profile,ai,feelings.palette);
   const themed = {...result,palette};
   const composition = AtmosphereDiary.design(day,result);
@@ -425,7 +439,7 @@ function showResult(day, scroll = true) {
   const memory = node("article", "memory");
   const hero = node("div", "memory-top");
   hero.style.setProperty("--accent", palette[0].hex);
-  hero.style.setProperty("--fade", Math.min(1.7, Math.max(.25, composition.interval / 4)) + "s");
+  hero.style.setProperty("--fade", composition.transition + "s");
   hero.style.setProperty("--sat", .72 + result.energy * .55);
   hero.style.setProperty("--contrast", 1 + Number(result.contrast || 0) * .24);
   hero.dataset.motion = composition.motion;
@@ -448,6 +462,9 @@ function showResult(day, scroll = true) {
   copy.append(time, h2, node("p", "", ai?.summary || profile?.summary || feelings.summary || result.description));
   hero.append(images, copy);
   let slide = 0;
+  let audioClock = null;
+  let anchorFrame = 0;
+  let anchorTime = 0;
   const slides = node("div", "slides");
   const slideButtons = day.pictures.map((_, index) => {
     const button = node("button", "", index + 1);
@@ -466,7 +483,11 @@ function showResult(day, scroll = true) {
   }
   if (frames.length > 1) {
     slideButtons.forEach((button, index) => {
-      button.addEventListener("click", () => goFrame(index));
+      button.addEventListener("click", () => {
+        anchorFrame = index;
+        anchorTime = audioClock?.currentTime ?? 0;
+        goFrame(index);
+      });
       slides.append(button);
     });
     copy.append(slides);
@@ -500,14 +521,25 @@ function showResult(day, scroll = true) {
     player.loop = day.demo;
     state.playbackUrl = URL.createObjectURL(day.track.blob);
     player.src = state.playbackUrl;
+    audioClock = player;
     if (frames.length > 1) {
-      player.addEventListener("play", () => {
-        clearInterval(state.slideTimer);
-        if (!motion.matches) {
-          state.slideTimer = setInterval(() => goFrame((slide + 1) % frames.length), composition.interval * 1000);
+      const followAudio = () => {
+        if (motion.matches) return;
+        if (player.currentTime < anchorTime) {
+          anchorTime = 0;
+          anchorFrame = 0;
         }
+        const elapsed = Math.max(0,player.currentTime-anchorTime);
+        const index = (anchorFrame + Math.floor(elapsed/composition.interval)) % frames.length;
+        if (index !== slide) goFrame(index);
+      };
+      player.addEventListener("play",followAudio);
+      player.addEventListener("timeupdate",() => { if (!player.paused) followAudio(); });
+      player.addEventListener("seeked",() => {
+        anchorTime = 0;
+        anchorFrame = 0;
+        followAudio();
       });
-      for (const name of ["pause","ended"]) player.addEventListener(name, () => clearInterval(state.slideTimer));
     }
     notes.append(player);
   } else if (safeLink(day.track.url)) {
@@ -560,7 +592,8 @@ function showResult(day, scroll = true) {
   memory.append(hero);
   const band = profile ? AtmosphereDiary.renderSection(day,profile,ai,(reading) => saveAtmosphereReading(day,reading),songVibe) : feelingBand(feelings);
   if (band) memory.append(band);
-  memory.append(EditorialBoard.section(day),content,PinterestMood.section(day,(pin) => addDayPin(day,pin)));
+  if (day.reference) memory.append(EditorialBoard.section(day));
+  memory.append(content,PinterestMood.section(day,(pin) => addDayPin(day,pin)));
   $("result").replaceChildren(memory);
   $("result").hidden = false;
   if (scroll) {
@@ -699,10 +732,10 @@ async function buildFolder(day) {
     player = '<a href="' + escapeHtml(safeLink(day.track.url)) + '">Открыть песню</a>';
   }
   const result = day.result;
-  const vibe = readingFor(day.track);
+  const vibe = readingFor(day.track,day);
   const feelings = explainFeelings(day,vibe);
   const profile = AtmosphereDiary.localProfile(day,vibe);
-  const ai = profile ? day.atmosphereAI : null;
+  const ai = profile && day.atmosphereAI?.interpretationVersion === 2 ? day.atmosphereAI : null;
   const colors = atmosphereColors(profile,ai,feelings.palette);
   const theme = MoodTheme.build({...result,palette:colors},vibe);
   const flowHTML = profile ? '<h2>Атмосфера дня</h2>' + [
@@ -717,7 +750,8 @@ async function buildFolder(day) {
     files.push([root + "Атмосфера.json",JSON.stringify(data,null,2)]);
   }
   const vibeHTML = vibe ? '<h3>' + escapeHtml(vibe.label) + '</h3><p>' + escapeHtml(vibe.description) +
-    '</p><small>' + escapeHtml(vibe.evidence) + '</small>' : '';
+    '</p><small>' + escapeHtml(vibe.evidence) + '</small>' +
+    (vibe.connection ? '<p>' + escapeHtml(vibe.connection) + '</p>' : '') : '';
   const palette = colors.map((color) => '<li><span style="background:' + escapeHtml(color.hex) + '"></span><strong>' +
     escapeHtml(color.name + " · " + color.hex + (color.role ? " · " + color.role : "")) + '</strong><p>' +
     escapeHtml(color.meaning) + '</p><small>' + escapeHtml(color.evidence) + '</small>' +
@@ -734,7 +768,7 @@ async function buildFolder(day) {
     '<style>body{margin:0 auto;padding:30px 18px;max-width:940px;font:16px/1.5 system-ui;background:' + theme.css["--m-bg"] + ';color:' + theme.css["--ink"] + '}h1{font:clamp(2em,7vw,4em)/1.04 Georgia,serif;margin:6px 0 20px}.photos{display:flex;gap:8px;flex-wrap:wrap}.photos img{flex:1 1 250px;min-width:0;width:100%;max-height:420px;object-fit:cover;border-radius:8px}ul{padding:0;list-style:none}li{padding:12px 0;border-bottom:1px solid ' + theme.css["--m-line"] + '}li span{display:inline-block;width:40px;height:18px;vertical-align:middle;margin-right:8px;border-radius:4px}li p{margin:4px 0}small{color:' + theme.css["--muted"] + '}audio{max-width:100%}.pin-export{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.pin-export figure{margin:0}.pin-export img{width:100%;aspect-ratio:1.25;object-fit:cover;border-radius:6px}.pin-export figcaption{font-size:13px}</style>' +
     '<main><time>' + escapeHtml(dateLabel(day.date, fullDate)) + '</time><h1>' + escapeHtml(day.title) +
     '</h1><div class="photos">' + pictures.join("") + '</div><p>' + escapeHtml(ai?.summary || profile?.summary || feelings.summary || result.description) +
-    '</p>' + (profile ? flowHTML : emotionalReading) + EditorialBoard.exportHtml(day,escapeHtml) +
+    '</p>' + (profile ? flowHTML : emotionalReading) + (day.reference ? EditorialBoard.exportHtml(day,escapeHtml) : '') +
     '<h2>Почему эти цвета</h2><ul>' + palette + '</ul>' + PinterestMood.exportHtml(day, escapeHtml) +
     '<h2>Песня дня</h2><p>' + escapeHtml(day.track.title) +
     '</p>' + player + vibeHTML + '<details><summary>Запись дня</summary><p style="white-space:pre-wrap">' +
@@ -853,7 +887,11 @@ function bindEvents() {
     event.preventDefault();
     if ($("create").disabled) return;
     const text = $("story").value.trim();
-    if (!text && !state.quiz?.completed) { status("entryStatus", "Добавь несколько слов о дне или пройди тест «Описать день образами».", true); $("story").focus(); return; }
+    if (!state.quiz?.completed) {
+      status("entryStatus","Сначала пройди тест атмосферы. Он нужен для подбора настроения дня.",true);
+      openAtmosphere();
+      return;
+    }
     if (state.loadingPhotos) { status("entryStatus", "Дождись чтения фотографий."); return; }
     if (!state.pictures.length) { status("entryStatus", "Добавь хотя бы одно фото.", true); $("photoButton").focus(); return; }
     if (!state.track) { status("entryStatus", "Добавь песню дня.", true); $("songButton").focus(); return; }
@@ -861,9 +899,10 @@ function bindEvents() {
     $("create").disabled = true;
     pulseWheel();
     status("entryStatus", "Собираю цвета дня…");
-    const quiz = hasQuizAnswers() ? JSON.parse(JSON.stringify(state.quiz)) : null;
-    const source = AtmosphereDiary.answerText(quiz?.completed ? quiz : null,text);
-    const result = analysis(source,state.pictures,state.track);
+    const sourceQuiz = state.quiz;
+    const quiz = JSON.parse(JSON.stringify(sourceQuiz));
+    const source = AtmosphereDiary.answerText(quiz,text);
+    const result = analysis(source,state.pictures,state.track,quiz,readingFor(state.track,{text,quiz}));
     const day = {
       id:globalThis.crypto?.randomUUID?.() ?? String(Date.now()) + "-" + Math.random().toString(36).slice(2),
       date:state.sampleDate || todayKey(),
@@ -873,11 +912,12 @@ function bindEvents() {
       quiz,
       pictures:[...state.pictures],
       track:state.track,
-      result
+      result,
+      interpretationVersion:2
     };
-    const profile = AtmosphereDiary.localProfile(day,readingFor(day.track));
+    const profile = AtmosphereDiary.localProfile(day,readingFor(day.track,day));
     if (profile?.palette?.length) day.quizPalette = profile.palette.map(({hex}) => hex);
-    day.pinterest = PinterestMood.snapshot(profile?.palette?.length ? {...day,result:{...result,palette:profile.palette}} : day);
+    day.pinterest = PinterestMood.snapshot(pinContext(day,profile),state.entries);
     let saved = false;
     try {
       if (state.storageReady) {
@@ -888,6 +928,9 @@ function bindEvents() {
       status("archiveStatus", "Браузер не смог сохранить одну из записей. Её можно скачать из дневника.", true);
     } finally {
       state.entries.unshift(day);
+      const unchanged = state.quiz === sourceQuiz && state.track === day.track && $("story").value.trim() === text &&
+        state.pictures.length === day.pictures.length && state.pictures.every((picture,index)=>picture === day.pictures[index]);
+      if (unchanged) clearEntryDraft();
       renderArchive();
       showResult(day);
       status("entryStatus", saved ? "Запись сохранена в архиве." : "Запись открыта в этой вкладке. Скачай папку, чтобы сохранить её.", !saved);
@@ -902,22 +945,12 @@ function bindEvents() {
     state.pictures = [...day.pictures];
     state.track = day.track;
     state.sampleDate = day.date;
-    status("entryStatus", "");
+    status("entryStatus",state.quiz?.completed ? "" : "Пример заполнен. Пройди тест атмосферы, чтобы собрать свою версию.");
     updateInputs();
   });
   $("resetEntry").addEventListener("click", () => {
-    state.photoJob++;
-    state.loadingPhotos = false;
-    state.pictures = [];
-    state.track = null;
-    state.sampleDate = "";
-    state.quizView.setValue(null);
-    state.quiz = null;
-    AtmosphereDiary.saveDraft(null);
-    refreshQuizButton();
-    $("story").value = "";
-    status("entryStatus", "");
-    updateInputs();
+    clearEntryDraft();
+    status("entryStatus","");
     $("story").focus();
   });
   $("composeTab").addEventListener("click", updateWheel);
@@ -955,6 +988,49 @@ function updateTabs() {
   }
 }
 
+function clearEntryDraft() {
+  state.photoJob++;
+  state.loadingPhotos = false;
+  state.pictures = [];
+  state.track = null;
+  state.sampleDate = "";
+  state.quizView.setValue(null);
+  state.quiz = null;
+  AtmosphereDiary.saveDraft(null);
+  refreshQuizButton();
+  $("story").value = "";
+  renderSongPreview(null);
+  updateInputs();
+}
+
+function pinContext(day, profile) {
+  return profile?.palette?.length ? {...day,result:{...day.result,palette:profile.palette}} : day;
+}
+
+function refreshSavedDays(days) {
+  const byCapture = [...days].sort((a,b) =>
+    (Number(a.created)||0)-(Number(b.created)||0) || String(a.date).localeCompare(String(b.date)) || String(a.id).localeCompare(String(b.id)));
+  const refreshed = [];
+  for (const saved of byCapture) {
+    const song = readingFor(saved.track,saved);
+    const isLegacy = saved.interpretationVersion !== 2;
+    const result = isLegacy
+      ? analysis(AtmosphereDiary.answerText(saved.quiz?.completed ? saved.quiz : null,saved.text),saved.pictures,saved.track,saved.quiz,song)
+      : saved.result;
+    const day = {...saved,result,interpretationVersion:2};
+    const profile = AtmosphereDiary.localProfile(day,song);
+    if (isLegacy) {
+      day.quizPalette = profile?.palette?.map(({hex})=>hex);
+    }
+    if (saved.pinterest?.schemaVersion !== 2) {
+      const snapshot = PinterestMood.snapshot(pinContext(day,profile),refreshed);
+      day.pinterest = {...snapshot,extras:Array.isArray(saved.pinterest?.extras) ? saved.pinterest.extras : []};
+    }
+    refreshed.push(day);
+  }
+  return refreshed;
+}
+
 async function init() {
   const date = todayKey();
   $("today").dateTime = date;
@@ -972,7 +1048,8 @@ async function init() {
 
   const database = openDatabase().then(async (db) => {
     state.db = db;
-    state.entries = await dbAction("readonly", (store) => store.getAll());
+    const days = await dbAction("readonly", (store) => store.getAll());
+    state.entries = refreshSavedDays(days);
     state.storageReady = true;
   }).catch(() => status("archiveStatus", "Постоянный архив недоступен в этом режиме браузера. Папки дней можно скачать.", true));
   const examples = Promise.allSettled(DemoCatalog.map(makeExample)).then((results) => {

@@ -49,7 +49,8 @@ const AtmosphereAI = (function atmosphereAiModule() {
     "Учитывай написанные детали и ответы анкеты, реальные фото и заданные признаки звука. Строй объяснения на наблюдаемых совпадениях и расхождениях, а незаметные связи оставляй без догадок.",
     "Называй конкретный момент, деталь кадра или характеристику музыки рядом с выводом. Не выдумывай события, людей, слова песни, тональность и инструменты. Фото нумеруются по порядку.",
     "Сортируй связи по полезности. В tensions сохраняй важные контрасты, если источники действительно расходятся, иначе верни пустой массив. Не превращай соседство контрастных деталей в смену настроения без явного признака времени в записи.",
-    "Используй формулировки о сцене и её атмосфере. Не утверждай, что знаешь внутренние чувства автора, и не давай медицинских или психологических выводов.",
+    "Используй формулировки о сцене и её атмосфере. Тишина, низкая яркость, холодный оттенок или медленный темп сами по себе не говорят о грусти. Называй внутреннее чувство автора только со ссылкой на то, как автор сам описал его в записи или тесте.",
+    "Образ кофе, кофейные и шоколадные оттенки уместны, только если пользователь сам их назвал, выбрал или они действительно видны в кадре. Не придумывай тёплую подложку. Используй измеренный темп, акценты и устойчивость пульса для объяснения ритма кадров и связи с выбранным ритмом дня.",
     "Избегай правил вроде «синий = грусть». Два источника могут придавать одному цвету разные значения. Для paletteNotes используй только HEX из palette, иначе оставь пустой массив.",
     "Поле visual описывает свет, цвета и видимые детали. Поле sound объясняет характер трека по измеренным или ручным признакам, учитывая их источник. Никогда не говори, что слышишь аудио, поскольку доступны только его признаки.",
     "Кратко заполни JSON. summary — 2–3 предложения, visual и sound — до двух предложений, title — несколько слов, detail и meaning — по 1–2 предложения. Не включай разметку, ссылки, личные идентификаторы и повторение полной записи.",
@@ -109,9 +110,11 @@ const AtmosphereAI = (function atmosphereAiModule() {
   function selectedSound(track, song) {
     const keys = ["title", "artist", "genre", "year", "tempo", "bpm", "energy", "tone", "timbre", "brightness",
       "dynamics", "dynamicRange", "method", "source", "description", "character", "spectralCentroid", "rms",
-      "tempoConfidence", "intensity", "texture", "instrumentation", "vibe", "note", "mood", "descriptionMode"];
+      "tempoConfidence", "rhythmContinuity", "accentRate", "accentStrength", "pace", "pulse", "certainty",
+      "frameMs", "beatMs", "basis", "connection", "intensity", "texture", "instrumentation", "vibe", "note", "mood", "descriptionMode"];
 
-    const inputs = [typeof song === "object" ? song : {title:song}, song?.analysis, track, track?.profile, track?.analysis];
+    const inputs = [track, track?.profile, track?.analysis, track?.pacing, song?.analysis,
+      typeof song === "object" ? song : {title:song}, song?.pacing];
     const result = {};
     for (const input of inputs) {
       for (const key of keys) {

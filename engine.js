@@ -7,44 +7,23 @@ const Engine = (() => {
   const toHex = rgb => '#' + rgb.map(value => Math.round(clamp(value, 0, 255)).toString(16).padStart(2, '0')).join('');
   const luminance = rgb => (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255;
 
-  const profiles = [
-    {
-      mood: 'Тёплая тишина', hex: '#ba743d', technique: 'Мягкий свет, зерно и плавные переходы',
-      image: 'Плёночная фотография и мягкий рассеянный свет импрессионизма',
-      cue: 'тепл уют осен лист какао чай вечер солнц закат близ обня обним камин свеч нежн разговор бабуш дедуш домой',
-      energy: 0.31
-    },
-    {
-      mood: 'Спокойная грусть', hex: '#344568', technique: 'Воздух вокруг снимка и глубокие тени',
-      image: 'Принцип пустого пространства в японской графике',
-      cue: 'груст тоска тоск одинок дождя дожд пасмур син туман тих молч пуст скуча прощ одиноч холод медлен вспомнил ностальг',
-      energy: 0.20
-    },
-    {
-      mood: 'Яркий импульс', hex: '#bd4c42', technique: 'Контрастные акценты и короткие переходы',
-      image: 'Контраст и диагонали абстрактной геометрической композиции',
-      cue: 'спеш сроч горел волн злил нерв дедлайн сдал сдач сдава быстр устал хаос громк ночь офис ночев беж гон финиш адренал',
-      energy: 0.79
-    },
-    {
-      mood: 'Лёгкая радость', hex: '#c79227', technique: 'Светлая бумага, крупный снимок и упругий ритм',
-      image: 'Многослойный бумажный коллаж и солнечная плёночная фотография',
-      cue: 'смеш сме смея улыб рад весёл весел праздник днём рождени побед танц счаст концерт поехал праздник весен летн пляж',
-      energy: 0.64
-    },
-    {
-      mood: 'Свежесть и простор', hex: '#4f745c', technique: 'Широкие поля и мягкие края снимков',
-      image: 'Воздушная композиция пейзажной фотографии и природные фактуры',
-      cue: 'лес трав парк сад горы горн озер озёр рек мор берег водопад простор свеж озелен облак утрен рассвет цветы цветок',
-      energy: 0.39
-    },
-    {
-      mood: 'Сумеречная задумчивость', hex: '#745986', technique: 'Мягкие наложения и сумеречные полутона',
-      image: 'Цветовые поля и наложение полупрозрачных плоскостей',
-      cue: 'сумерк сирен мечт звезд звёзд спутн луны луна полноч неон удив загад размыш горо задум фантаз',
-      energy: 0.44
-    }
-  ].map(profile => ({...profile, terms: profile.cue.split(' ')}));
+  const visualModes = {
+    still: {image: 'Принцип пустого пространства в японской графике', technique: 'Широкие поля, глубокие полутона и длинные паузы'},
+    active: {image: 'Контраст и диагонали абстрактной геометрической композиции', technique: 'Контрастные акценты и короткие переходы'},
+    soft: {image: 'Плёночная фотография и рассеянный свет импрессионизма', technique: 'Мягкие границы светового пятна и ровный ритм'},
+    natural: {image: 'Воздушная композиция пейзажной фотографии и природные фактуры', technique: 'Широкие поля и мягкие края снимков'},
+    plain: {image: 'Многослойный бумажный коллаж и плёночная фотография', technique: 'Свободная композиция с цветами из выбранных материалов'}
+  };
+
+  function answerText(value) {
+    return typeof value === 'string' ? value : String(value?.custom || value?.label || value?.value || '');
+  }
+
+  function userColors(quiz) {
+    const list = Array.isArray(quiz?.answers?.colors) ? quiz.answers.colors : [];
+    return list.map(entry => ({hex: typeof entry === 'string' ? entry : entry?.hex, label: entry?.label, association: entry?.association}))
+      .filter(entry => /^#[0-9a-f]{6}$/i.test(entry.hex || ''));
+  }
 
   const titleMotifs = [
     ['осен', 'лист', 'Осенние листья'],
@@ -62,9 +41,10 @@ const Engine = (() => {
     ['туман', 'гор', 'Горы в тумане'],
     ['рассвет', '', 'Свет рассвета'],
     ['какао', '', 'Кружка какао'],
+    ['кофе', '', 'Кофе в деталях'],
     ['разговар', '', 'Долгий разговор'],
     ['разговор', '', 'Долгий разговор'],
-    ['дожд', '', 'Дождь над городом'],
+    ['дожд', '', 'День под дождём'],
     ['озер', '', 'У озера'],
     ['озёр', '', 'У озера'],
     ['пруд', '', 'Возле пруда'],
@@ -130,29 +110,29 @@ const Engine = (() => {
       if (hue < 0) hue += 360;
     }
     if (range < 0.12) {
-      if (level > 0.69) return {name: 'Серебристый', meaning: 'пауза, воздух и мягкий свет'};
-      if (level > 0.44 && b > r + 0.02) return {name: 'Голубовато-серый', meaning: 'лёгкая отстранённость, прохлада и спокойный ритм'};
-      return {name: 'Графитовый', meaning: 'сдержанность, тишина и собранность'};
+      if (level > 0.69) return {name: 'Серебристый', meaning: 'воздух и мягкий свет'};
+      if (level > 0.44 && b > r + 0.02) return {name: 'Голубовато-серый', meaning: 'прохладу и приглушённый свет'};
+      return {name: 'Графитовый', meaning: 'сдержанность и глубину'};
     }
     if (hue < 17 || hue >= 340) {
-      return {name: level < 0.42 ? 'Вишнёвый' : 'Коралловый', meaning: 'волнение, живой импульс и энергия'};
+      return {name: level < 0.42 ? 'Вишнёвый' : 'Коралловый', meaning: 'выразительный цветовой акцент'};
     }
     if (hue < 47) {
-      return {name: level < 0.45 ? 'Медный' : level < 0.63 ? 'Янтарный' : 'Персиковый', meaning: 'уют, близость и сохраняющееся тепло'};
+      return {name: level < 0.45 ? 'Медный' : level < 0.63 ? 'Янтарный' : 'Персиковый', meaning: 'тёплый свет и мягкость'};
     }
-    if (hue < 72) return {name: 'Золотистый', meaning: 'солнечный свет, открытость и лёгкая радость'};
+    if (hue < 72) return {name: 'Золотистый', meaning: 'солнечный свет и ясность'};
     if (hue < 158) {
-      return {name: level < 0.43 ? 'Лесной зелёный' : 'Шалфейный', meaning: 'природа, свежесть и ощущение простора'};
+      return {name: level < 0.43 ? 'Лесной зелёный' : 'Шалфейный', meaning: 'природную свежесть'};
     }
-    if (hue < 194) return {name: 'Бирюзовый', meaning: 'прохлада, ясность и свободное дыхание'};
+    if (hue < 194) return {name: 'Бирюзовый', meaning: 'прохладу и ясность'};
     if (hue < 234) {
       return level < 0.52
-        ? {name: 'Глубокий синий', meaning: 'спокойствие, лёгкая грусть и вечерняя тишина'}
-        : {name: 'Дымчато-голубой', meaning: 'прохладный воздух, тишина и созерцание'};
+        ? {name: 'Глубокий синий', meaning: 'прохладу и глубину теней'}
+        : {name: 'Дымчато-голубой', meaning: 'прохладный воздух и рассеянный свет'};
     }
-    if (hue < 255) return {name: level < 0.50 ? 'Сине-фиолетовый' : 'Сумеречно-синий', meaning: 'вечерняя прохлада, сосредоточенность и глубина'};
-    if (hue >= 302) return {name: level < 0.48 ? 'Сливовый' : 'Розово-лиловый', meaning: 'тепло, фантазия и живой акцент'};
-    return {name: level < 0.52 ? 'Черничный' : 'Сиреневый', meaning: 'сумерки, мечтательность и задумчивость'};
+    if (hue < 255) return {name: level < 0.50 ? 'Сине-фиолетовый' : 'Сумеречно-синий', meaning: 'прохладу и глубину'};
+    if (hue >= 302) return {name: level < 0.48 ? 'Сливовый' : 'Розово-лиловый', meaning: 'тепло и мягкий акцент'};
+    return {name: level < 0.52 ? 'Черничный' : 'Сиреневый', meaning: 'сумеречный полутон'};
   }
 
   function makeSwatch(rgb, evidence) {
@@ -249,86 +229,100 @@ const Engine = (() => {
     }
   }
 
-  function analyze({text: rawText, photos = [], track: rawTrack} = {}) {
+  function analyze({text: rawText, photos = [], track: rawTrack, song: rawSong, quiz} = {}) {
     const text = String(rawText || '').trim();
     const tokens = words(text);
     const track = rawTrack || {};
-    const hasTrack = Boolean(track.title || track.method || track.url || track.tone ||
-      Number.isFinite(track.tempo) || Number.isFinite(track.energy));
-    const energy = clamp(Number.isFinite(track.energy) ? track.energy : 0.47);
-    const fastest = clamp(Number.isFinite(track.tempo) ? (track.tempo - 45) / 125 : energy);
-    const usefulPhotos = photos.filter(photo => Array.isArray(photo.colors) && photo.colors.length > 0);
-    const brightness = usefulPhotos.length
-      ? usefulPhotos.reduce((sum, photo) => sum + (Number.isFinite(photo.brightness) ? photo.brightness : 0.5), 0) / usefulPhotos.length
-      : 0.5;
-    const photoSignals = usefulPhotos.flatMap((photo, i) => photo.colors
-      .filter(color => /^#[0-9a-f]{6}$/i.test(color.hex))
-      .map(color => ({...color, index: i, rgb: fromHex(color.hex)})));
-    const strongest = photoSignals.sort((a, b) => b.weight - a.weight)[0];
-    const textured = photoSignals
-      .map(color => ({...color, score: Math.sqrt(Math.max(0, color.weight)) *
-        (0.27 + (Math.max(...color.rgb) - Math.min(...color.rgb)) / 130) *
-        (1 - Math.abs(luminance(color.rgb) - 0.47))}))
+    const song = rawSong || {};
+    const tempo = Number.isFinite(track.tempo) && track.tempo > 0 ? track.tempo : Number.isFinite(song.tempo) && song.tempo > 0 ? song.tempo : null;
+    const suppliedEnergy = Number.isFinite(track.energy) ? track.energy : Number.isFinite(song.energy) ? song.energy : null;
+    const tone = ['warm', 'cool', 'neutral'].includes(track.tone) ? track.tone
+      : ['warm', 'cool', 'neutral'].includes(song.tone) ? song.tone : null;
+    const silent = Boolean(track.silent || song.silent);
+    const hasTrack = Boolean(tempo != null || suppliedEnergy != null || tone || silent);
+    const energy = clamp(suppliedEnergy ?? (tempo == null ? 0.44 : (tempo - 50) / 115));
+    const fastest = clamp(tempo != null ? (tempo - 45) / 125 : energy);
+    const photoList = Array.isArray(photos) ? photos : [];
+    const photoSignals = photoList.flatMap((photo, index) => (Array.isArray(photo?.colors) ? photo.colors : [])
+      .filter(color => /^#[0-9a-f]{6}$/i.test(color?.hex || ''))
+      .map(color => ({index, weight: Number.isFinite(color.weight) && color.weight > 0 ? color.weight : 1, rgb: fromHex(color.hex)})));
+    const values = [...new Set(photoSignals.map(color => color.index))]
+      .map(index => photoList[index].brightness).filter(Number.isFinite);
+    const sourcePhoto = photoSignals.map(color => ({...color, score: Math.sqrt(color.weight) *
+      (0.68 + (Math.max(...color.rgb) - Math.min(...color.rgb)) / 300) *
+      (1 - Math.abs(luminance(color.rgb) - 0.50) * 0.45)}))
       .sort((a, b) => b.score - a.score)[0];
-
-    const ranked = profiles.map(profile => {
-      const matched = [...new Set(tokens.filter(token =>
-        profile.terms.some(term => token.startsWith(term))))];
-      const distance = Math.abs(energy - profile.energy);
-      return {profile, matched, score: matched.length * 1.25 + (1 - distance) * 1.2};
-    }).sort((a, b) => b.score - a.score);
-    const theme = ranked[0];
-    const {profile, matched} = theme;
-    const storyline = tokens.length ? pickTitle(text, tokens, profile.mood) : 'Новая страница дневника';
-    const target = fromHex(profile.hex);
-    const photoAccent = textured?.rgb || strongest?.rgb || [141, 151, 160];
-    const storyColor = mix(target, photoAccent, 0.16 + clamp(0.58 - brightness, 0, 0.27));
-    const contrast = 0.16 + 0.54 * energy + 0.20 * Math.abs(brightness - 0.5);
-    const musicTone = track.tone === 'cool' ? [65, 100, 177]
-      : track.tone === 'warm' ? [229, 176, 81] : [131, 133, 169];
-    const musicTarget = mix(musicTone, [251, 245, 232], (1 - energy) * 0.55);
-    const sonic = mix(storyColor, musicTarget, 0.56 + energy * 0.25);
-    const rhythm = Math.round((6.0 - 3.5 * fastest - 0.55 * energy) * 10) / 10;
-    const textClue = matched.length
-      ? 'Оттенок опирается на слова из записи «' + matched.slice(0, 3).join('», «') + '».'
-      : tokens.length ? 'Оттенок связан с темой записи «' + storyline + '».' : 'Текст добавит оттенок настроения.';
-    const sourcePhoto = textured || strongest;
-    const photoLight = brightness < 0.35 ? 'В кадрах преобладает тень.' : brightness > 0.67 ? 'В кадрах много света.' : 'В кадрах мягкий перепад света.';
-    const photoClue = sourcePhoto
-      ? 'Оттенок выделен из фото ' + (sourcePhoto.index + 1) + '. ' + photoLight
-      : photos.length ? 'На фото нет непрозрачного цвета для анализа.' : 'Фотографии добавят оттенок света.';
-    const musicPace = Number.isFinite(track.tempo)
-      ? 'Темп около ' + Math.round(track.tempo) + ' уд./мин'
-      : fastest > 0.62 ? 'Быстрое движение' : fastest < 0.32 ? 'Медленное движение' : 'Ровное движение';
-    const soundTone = track.tone === 'warm' ? 'тёплая окраска' : track.tone === 'cool' ? 'прохладная окраска' : 'нейтральная окраска';
+    const brightness = values.length ? clamp(values.reduce((sum, value) => sum + value, 0) / values.length)
+      : sourcePhoto ? luminance(sourcePhoto.rgb) : 0.5;
+    const choices = userColors(quiz);
+    const selected = choices[0];
+    const answers = quiz?.answers || {};
+    const rhythmWords = answerText(answers.rhythm).toLowerCase();
+    const slowAnswer = /медлен|размерен|спокой|нетороп|длинн.{1,6}пауз/iu.test(rhythmWords) && !/быстр|хаот|резк/iu.test(rhythmWords);
+    const fastAnswer = /быстр|хаот|резк|рывк|сует/iu.test(rhythmWords) && !slowAnswer;
+    const quietText = /\bquiet\b|тишин|без диалог|молч|медлен|спокой/iu.test(text);
+    const quickText = /\bfast\b|спеш|сроч|резк|рывк|хаос|быстр|галоп/iu.test(text);
+    const nature = /лес|парк|пруд|оз[её]р|мор[еяю]|берег|луг|горы/iu.test(text + ' ' + answerText(answers.place));
+    const softScene = /рассеян|мягк|туман|запот|приглуш/iu.test(text + ' ' + answerText(answers.texture));
+    const warmMoment = /(?:^|[^\p{L}])(?:кофе|какао|кофейн\p{L}*|коричнев\p{L}*|медн\p{L}*|янтарн\p{L}*|охрист\p{L}*)(?=$|[^\p{L}])/iu.exec(text);
+    const neutral = [125, 137, 151];
+    const warm = [163, 112, 76];
+    const base = selected ? fromHex(selected.hex) : sourcePhoto?.rgb || (warmMoment ? warm : neutral);
+    const storyColor = selected ? base
+      : sourcePhoto ? mix(base, warmMoment ? warm : [175, 187, 202], warmMoment ? 0.23 : 0.18)
+        : base;
+    const photoAccent = sourcePhoto?.rgb || mix(storyColor, [156, 165, 176], 0.26);
+    const measuredTarget = tone === 'cool' ? [105, 146, 193]
+      : tone === 'warm' ? [184, 172, 180] : [133, 145, 164];
+    const sonic = hasTrack ? mix(storyColor, measuredTarget, tone === 'cool' ? 0.40 : 0.24 + 0.10 * energy)
+      : mix(storyColor, [119, 139, 159], 0.22);
+    const perceivedRhythm = slowAnswer ? Math.min(0.37, fastest * 0.63 + 0.10)
+      : fastAnswer ? Math.max(0.60, fastest * 0.58 + 0.35) : fastest;
+    const rhythm = Math.round((6.0 - 3.5 * perceivedRhythm - 0.55 * energy) * 10) / 10;
+    const contrast = clamp(0.16 + 0.48 * energy + 0.20 * Math.abs(brightness - 0.5));
+    const visibleMood = fastAnswer || quickText || (hasTrack && perceivedRhythm > 0.66) ? 'Быстрый ритм'
+      : slowAnswer || quietText ? 'Размеренный ритм'
+        : sourcePhoto && brightness > 0.66 ? 'Светлые кадры'
+          : sourcePhoto && brightness < 0.40 ? 'Глубокие полутона'
+            : softScene ? 'Рассеянный свет' : nature ? 'Простор и детали' : 'День в деталях';
+    const profile = fastAnswer || quickText || (hasTrack && perceivedRhythm > 0.66) ? visualModes.active
+      : slowAnswer || quietText ? visualModes.still : softScene ? visualModes.soft
+        : nature ? visualModes.natural : visualModes.plain;
+    const feelings = typeof FeelingNarrative !== 'undefined' ? FeelingNarrative.context({text, quiz}) : null;
+    const mood = feelings?.label || visibleMood;
+    const storyline = tokens.length ? pickTitle(text, tokens, visibleMood) : 'Новая страница дневника';
+    const textClue = selected
+      ? 'Оттенок выбран в анкете' + (selected.label ? ' — «' + selected.label + '»' : '') + '.'
+      : warmMoment && !sourcePhoto ? 'В записи есть «' + warmMoment[0].trim().replace(/^[^\p{L}]+/u, '') + '».'
+        : sourcePhoto ? 'Основной цвет связан с палитрой ваших снимков.'
+          : 'Нейтральный цвет оставляет место деталям записи.';
+    const photoLight = brightness < 0.35 ? 'Снимки в среднем тёмные.' : brightness > 0.67 ? 'Снимки в среднем светлые.' : 'Средняя яркость снимков умеренная.';
+    const photoClue = sourcePhoto ? 'Оттенок выделен из фото ' + (sourcePhoto.index + 1) + '. ' + photoLight
+      : photoList.length ? 'На фото нет непрозрачного цвета для анализа.' : 'Фотографии добавят оттенок света.';
+    const musicPace = silent ? 'Почти тишина' : tempo != null ? 'Темп около ' + Math.round(tempo) + ' уд./мин'
+      : suppliedEnergy != null ? (fastest > 0.62 ? 'Быстрое движение' : fastest < 0.32 ? 'Медленное движение' : 'Ровное движение')
+        : null;
+    const soundTone = tone === 'warm' ? 'мягкая окраска' : tone === 'cool' ? 'ясная окраска' : tone === 'neutral' ? 'ровная окраска' : null;
     const musicClue = hasTrack
-      ? musicPace + ' и ' + soundTone + ' меняют акцент и скорость смены кадров.'
-      : 'Музыка добавит цветовой акцент и ритм.';
-    const palette = [
-      makeSwatch(storyColor, textClue),
-      makeSwatch(photoAccent, photoClue),
-      makeSwatch(sonic, musicClue)
-    ];
+      ? [musicPace, soundTone].filter(Boolean).join(' · ') + '.'
+      : track.url ? 'У песни есть ссылка. Темп и окраска пока не заданы.' : 'Музыка добавит цветовой акцент и ритм.';
+    const palette = [makeSwatch(storyColor, textClue), makeSwatch(photoAccent, photoClue), makeSwatch(sonic, musicClue)];
+    if (selected?.label) palette[0].name = selected.label;
+    if (selected?.association) palette[0].meaning = selected.association;
+    else if (feelings?.label) palette[0].meaning = feelings.label.toLowerCase();
     const notes = [];
-    if (tokens.length) {
-      notes.push(palette[0].name + ' передаёт настроение записи «' + storyline +
-        '». Его ассоциации — ' + palette[0].meaning + '.');
-    }
-    if (sourcePhoto) {
-      notes.push(palette[1].name + ' пришёл из снимков и добавил свои ассоциации — ' + palette[1].meaning + '.');
-    }
-    if (hasTrack) {
-      notes.push(palette[2].name + ' передаёт окраску звучания. Музыка задаёт ' +
-        (rhythm > 4.3 ? 'неторопливые переходы' : rhythm > 3.0 ? 'ровный ритм' : 'частые смены кадра') + '.');
-    }
-    const description = notes.join(' ') || 'Здесь появится цветовая история вашего дня.';
+    if (feelings?.label && feelings.quote) notes.push('В словах «' + feelings.quote + '» звучит ' + feelings.label.toLowerCase() + '.');
+    else if (tokens.length) notes.push('Воспоминание «' + storyline + '» собирается из деталей записи.');
+    if (selected) notes.push('Начало палитре даёт выбранный вами оттенок.');
+    if (sourcePhoto) notes.push('Оттенок из снимка добавляет ' + palette[1].meaning + '.');
+    if (hasTrack) notes.push('Характер звучания влияет на ритм смены кадров и цветовой акцент.');
     return {
-      title: storyline, description, palette,
-      mood: profile.mood, art: profile.image, technique: profile.technique,
-      rhythm, brightness, energy, contrast,
-      textClue, photoClue, musicClue, musicPace, soundTone,
-      paper: toHex(mix([245, 243, 238], storyColor, 0.10 + (1 - brightness) * 0.10)),
-      ink: toHex(mix([29, 38, 48], target, 0.20))
+      title: storyline, description: notes.join(' ') || 'Здесь появится цветовая история вашего дня.',
+      palette, paletteVersion: 2, mood, art: profile.image, technique: profile.technique,
+      rhythm, brightness, energy, contrast, textClue, photoClue, musicClue,
+      musicPace: musicPace || 'Ритм не задан', soundTone: soundTone || 'Окраска не задана',
+      paper: toHex(mix([243, 246, 249], storyColor, 0.12 + (1 - brightness) * 0.09)),
+      ink: toHex(mix([27, 36, 49], storyColor, 0.16))
     };
   }
 

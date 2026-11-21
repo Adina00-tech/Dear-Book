@@ -87,15 +87,17 @@ const AtmosphereProfile = (() => {
     const valid = measured.filter(photo => Number.isFinite(photo.brightness));
     const brightness = Number.isFinite(result.brightness) ? clamp(result.brightness)
       : valid.length ? clamp(valid.reduce((sum, photo) => sum + photo.brightness, 0) / valid.length) : null;
-    const representative = measured[0]?.colors.slice().sort((a, b) => (b.weight || 0) - (a.weight || 0))[0];
-    const parsed = rgb(fromResult?.hex) || rgb(representative?.hex);
+    const representative = measured.flatMap(photo => photo.colors)
+      .filter(color => rgb(color?.hex)).sort((a, b) => (b.weight || 0) - (a.weight || 0))[0];
+    const resultColor = indexed && rgb(fromResult?.hex);
+    const parsed = resultColor || rgb(representative?.hex);
     const light = brightness == null ? null : brightness < 0.34 ? 'снимки в среднем тёмные'
       : brightness > 0.66 ? 'снимки в среднем светлые' : 'средняя яркость снимков умеренная';
     const source = indexed ? 'Оттенок извлечён из снимка ' + indexed[1] + '.'
       : parsed ? 'Оттенок извлечён из палитры снимков.' : '';
     return {
       brightness, light, parsed, source,
-      name: parsed ? fromResult?.name || colorFacts(parsed).name : '',
+      name: parsed ? (resultColor && fromResult?.name) || colorFacts(parsed).name : '',
       temperature: parsed ? colorFacts(parsed).temperature : null
     };
   }
@@ -147,7 +149,7 @@ const AtmosphereProfile = (() => {
       if (duplicate) duplicate.evidence += ' Этот оттенок есть и в палитре фото.';
       else add({hex: photo.parsed.hex, name: photo.name, meaning: upper(colorFacts(photo.parsed).role), evidence: [photo.source, photo.light ? upper(photo.light) + '.' : ''].filter(Boolean).join(' ')});
     }
-    if (audio) {
+    if (audio && result.paletteVersion === 2) {
       const swatch = result.palette?.[2];
       const parsed = rgb(swatch?.hex);
       if (parsed) {
@@ -157,7 +159,9 @@ const AtmosphereProfile = (() => {
         else add({hex: parsed.hex, name: swatch.name || colorFacts(parsed).name, meaning: 'Цветовой акцент песни', evidence});
       }
     }
-    for (const swatch of result.palette || []) {
+    const supporting = result.paletteVersion === 2 ? result.palette || []
+      : [{hex: '#a8b4c1', name: 'Светлый серо-голубой'}, {hex: '#7d8997', name: 'Дымчато-серый'}, {hex: '#d5dce4', name: 'Светлый серый'}];
+    for (const swatch of supporting) {
       if (selected.length >= 3) break;
       const parsed = rgb(swatch?.hex);
       if (!parsed) continue;
@@ -267,7 +271,7 @@ const AtmosphereProfile = (() => {
     else if (tensions[0]?.title === 'Быстрый день и размеренная песня') overview.push('Песня оставляет паузы внутри быстрого дня.');
     else if (setting && view.rhythm && main) overview.push('Ритм ' + quote(view.rhythm) + ' и ' + lower(main.name) + ' связывают эти детали.');
     else if (main && view.texture) overview.push('В палитре встречаются ' + quote(main.name) + ' и фактура ' + quote(view.texture) + '.');
-    const summary = overview.join(' ') || copy(result.description, 250) || 'Свет, звук и цвет складываются из ваших ответов.';
+    const summary = overview.join(' ') || (result.paletteVersion === 2 && copy(result.description, 250)) || 'Свет, звук и цвет складываются из ваших ответов.';
     const searchText = [
       hasTrait(locus, 'warm', 'cool') ? 'warm available light' : hasTrait(locus, 'cool', 'warm') ? 'cool dusk light' : 'soft natural light',
       hasTrait(locus, 'open', 'dense') ? 'wide open space' : hasTrait(locus, 'dense', 'open') ? 'layered urban space' : 'intimate framing',
