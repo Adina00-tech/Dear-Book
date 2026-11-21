@@ -1,0 +1,54 @@
+
+/* The diary keeps its Aqua construction and shares one palette across surfaces. */
+:root[data-ambience] {background:var(--m-bg);color:var(--ink);accent-color:var(--m-focus)}
+:root[data-ambience="deep"] {color-scheme:dark}
+:root[data-ambience] body {min-height:100vh;background:radial-gradient(ellipse at 50% 0,var(--m-glow),transparent 71%),repeating-linear-gradient(0deg,transparent 0 3px,color-mix(in srgb,var(--m-shine) 24%,transparent) 3px 4px),var(--m-bg);color:var(--ink)}
+:root[data-ambience] .toolbar{background:linear-gradient(var(--m-chrome),var(--m-surface) 53%,var(--m-lower) 54%,var(--m-panel));border-color:var(--m-rim);box-shadow:0 2px 8px color-mix(in srgb,var(--m-mask) 20%,transparent)}
+:root[data-ambience] .brand-rule{border-color:var(--m-rim);box-shadow:1px 0 var(--m-shine)}
+:root[data-ambience] .brand-orb,:root[data-ambience] .small-orb {background:radial-gradient(ellipse at 32% 18%,#fff 0,var(--m-button-top) 20%,var(--m-orb) 52%,var(--m-button-rim) 82%,var(--m-button-bottom));border-color:var(--m-button-rim)}
+:root[data-ambience] .tab.active,:root[data-ambience] .tab:hover{background:linear-gradient(var(--m-lower),var(--m-panel));border-color:var(--m-rim);box-shadow:inset 0 1px 2px color-mix(in srgb,var(--m-mask) 24%,transparent),0 1px var(--m-shine)}
+:root[data-ambience] .count,:root[data-ambience] .kicker,:root[data-ambience] .intro,:root[data-ambience] .legend-row span,:root[data-ambience] .wheel-hint,:root[data-ambience] .story-count,:root[data-ambience] .section-head p,:root[data-ambience] .folder-meta,:root[data-ambience] footer{color:var(--muted)}
+:root[data-ambience] .window,:root[data-ambience] .music-dialog,:root[data-ambience] .memory {background:var(--m-surface);border-color:var(--m-rim);box-shadow:0 16px 43px color-mix(in srgb,var(--m-mask) 23%,transparent),0 3px 7px color-mix(in srgb,var(--m-mask) 24%,transparent)}
+:root[data-ambience] .window-bar{background:repeating-linear-gradient(0deg,transparent 0 2px,color-mix(in srgb,var(--m-shine) 30%,transparent) 2px 3px),linear-gradient(var(--m-chrome),var(--m-lower));border-color:var(--m-rim);color:var(--ink);text-shadow:none}
+:root[data-ambience] .lights i{border-color:var(--m-rim);background:linear-gradient(var(--m-shine),var(--m-hover),var(--m-lower));box-shadow:0 1px 1px var(--m-shine)}
+:root[data-ambience] .lights i:first-child {background:linear-gradient(var(--m-button-top),var(--m-button-bottom))}
+:root[data-ambience] .entry{background:linear-gradient(115deg,var(--m-surface) 10%,var(--m-surface) 48%,var(--m-panel))}
+:root[data-ambience] .color-panel{border-color:var(--m-line);background:radial-gradient(ellipse at 50% 37%,var(--m-glow),var(--m-panel) 53%,transparent 78%),repeating-linear-gradient(0deg,transparent 0 3px,color-mix(in srgb,var(--m-shine) var(--m-grain),transparent) 3px 4px),linear-gradient(var(--m-panel),var(--m-lower))}
+:root[data-ambience] .editor textarea,:root[data-ambience] .archive-controls input,:root[data-ambience] .music-fields input:not([type=file]),:root[data-ambience] .music-fields select{background:var(--m-input);border-color:var(--m-rim);box-shadow:inset 0 2px 6px color-mix(in srgb,var(--m-mask) 16%,transparent),0 1px var(--m-shine)}
+:root[data-ambience] .editor textarea::placeholder,:root[data-ambience] .archive-controls input::placeholder,:root[data-ambience] .music-fields input::placeholder{color:var(--muted);opacity:1}
+:root[data-ambience] .silver,:root[data-ambience] .close{background:linear-gradient(var(--m-chrome),var(--m-panel) 48%,var(--m-lower) 53%,var(--m-surface));color:var(--ink);border-color:var(--m-rim);box-shadow:inset 0 1px var(--m-shine),0 1px 2px color-mix(in srgb,var(--m-mask) 22%,transparent)}
+:root[data-ambience] .silver:hover,:root[data-ambience] .close:hover{background:linear-gradient(var(--m-chrome),var(--m-panel),var(--m-hover))}
+:root[data-ambience] .aqua{background:linear-gradient(var(--m-button-top),color-mix(in srgb,var(--m-button-top) 62%,var(--m-button-bottom)) 43%,var(--m-button-bottom) 49%,var(--m-button-bottom) 82%,var(--m-button-top));color:var(--m-button-ink);border-color:var(--m-button-rim);text-shadow:none;box-shadow:inset 0 1px 2px color-mix(in srgb,#fff 50%,transparent),0 2px 5px color-mix(in srgb,var(--m-mask) 25%,transparent)}
+:root[data-ambience] .text-button,:root[data-ambience] .icon-song,:root[data-ambience] .link-track{color:var(--teal)}
+:root[data-ambience] .icon-photo,:root[data-ambience] .icon-photo::after{border-color:var(--teal)}
+:root[data-ambience] .status{color:var(--muted)}
+:root[data-ambience] .status.error{color:var(--m-error)}
+:root[data-ambience] .wheel{background:linear-gradient(140deg,var(--m-shine),var(--m-lower) 43%,var(--m-surface) 60%,var(--m-hover));border-color:var(--m-rim);box-shadow:inset 0 1px 3px var(--m-shine),0 12px 18px -10px color-mix(in srgb,var(--m-mask) 60%,transparent),0 2px 5px color-mix(in srgb,var(--m-mask) 52%,transparent)}
+:root[data-ambience] .wheel-face{border-color:var(--m-rim);animation-duration:var(--m-wheel-time)}
+:root[data-ambience] .wheel.active .wheel-face{animation-duration:var(--m-wheel-hit)}
+:root[data-ambience] .wheel-center{background:radial-gradient(circle at 42% 24%,var(--m-shine),var(--m-panel) 39%,var(--m-lower) 85%);border-color:var(--m-rim);box-shadow:0 1px 8px color-mix(in srgb,var(--m-mask) 58%,transparent),inset 0 1px 2px var(--m-shine)}
+:root[data-ambience] .wheel-center span{background:radial-gradient(circle at 42% 21%,var(--m-button-top),var(--m-orb));border-color:var(--m-button-rim);box-shadow:0 1px 1px var(--m-shine)}
+:root[data-ambience] .legend-row,:root[data-ambience] .song-preview {background:color-mix(in srgb,var(--m-surface) 83%,var(--m-panel));border-color:var(--m-line)}
+:root[data-ambience] .legend-row b,:root[data-ambience] .palette-row p,:root[data-ambience] .journal-side p {color:var(--ink)}
+:root[data-ambience] .folder{background:linear-gradient(var(--m-surface),var(--m-panel));border-color:var(--m-rim);box-shadow:0 2px 4px color-mix(in srgb,var(--m-mask) 20%,transparent)}
+:root[data-ambience] .folder:hover{box-shadow:0 4px 11px color-mix(in srgb,var(--m-mask) 36%,transparent)}
+:root[data-ambience] .folder-image{background:var(--m-lower)}
+:root[data-ambience] .memory-content{background:var(--m-surface)}
+:root[data-ambience] .journal-side,:root[data-ambience] .source-switch{background:var(--m-panel);border-color:var(--m-line)}
+:root[data-ambience] .palette-row,:root[data-ambience] footer{border-color:var(--m-line)}
+:root[data-ambience] .palette-row small,:root[data-ambience] .journal-side details,:root[data-ambience] .music-form p,:root[data-ambience] .music-fields small{color:var(--muted)}
+:root[data-ambience] .music-dialog::backdrop{background:color-mix(in srgb,var(--m-mask) 70%,transparent)}
+:root[data-ambience] .photo-thumb img,:root[data-ambience] .photo-thumb button {border-color:var(--m-rim)}
+:root[data-ambience] .photo-thumb button {background:var(--m-input);color:var(--ink)}
+:root[data-ambience] :is(button,a,input,textarea,select):focus-visible {outline-color:var(--m-focus)}
+:root[data-ambience] .memory-top :is(button,a):focus-visible{outline-color:white}
+.song-preview{margin-top:10px;border:1px solid var(--m-line,#bac8bc);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--muted)}
+.song-preview-title{display:flex;align-items:center;gap:7px;color:var(--ink);margin-bottom:2px}
+.song-preview-title i{display:inline-block;border-radius:50%;width:11px;height:11px;background:var(--swatch);border:1px solid #88938e}
+.song-vibe-note{margin:11px 0 13px;padding:9px 11px;border-radius:6px;border:1px solid var(--m-line);background:var(--m-surface)}
+.song-vibe-note strong{display:flex;align-items:center;gap:8px;font-size:12px}
+.song-vibe-note small{display:block;font-size:11px;color:var(--muted)}
+.journal-side .song-vibe-note p{margin:3px 0;color:var(--ink);font-size:13px}
+:root[data-ambience] :is(body,.toolbar,.window-bar,.entry,.color-panel,.folder,.memory-content,.journal-side,.song-preview) {transition:background-color var(--m-transition) ease,border-color var(--m-transition) ease,color var(--m-transition) ease}
+.folder-reference .folder-image{object-position:top center}
+@media (prefers-reduced-motion:reduce){:root[data-ambience] :is(body,.toolbar,.window-bar,.entry,.color-panel,.folder,.memory-content,.journal-side,.song-preview){transition:none}}

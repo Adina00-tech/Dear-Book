@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://assets.pinterest.com https://www.pinterest.com https://widgets.pinterest.com; style-src 'unsafe-inline'; img-src https://i.pinimg.com https://s.pinimg.com data:; frame-src https://assets.pinterest.com https://www.pinterest.com; connect-src https://assets.pinterest.com https://www.pinterest.com https://widgets.pinterest.com; base-uri 'none'; form-action 'none'">
+<title>Фото Pinterest</title>
+<style>html,body{margin:0;font:12px/1.4 system-ui;background:transparent}body{padding:4px;box-sizing:border-box;text-align:center}a{color:#2e524b;background:#f3f8f5;border-radius:4px;padding:5px 7px;display:inline-block}body>span,iframe{max-width:100%!important}</style>
+</head>
+<body>
+<a id="pin" target="_blank" rel="noopener noreferrer">Посмотреть фото на Pinterest ↗</a>
+<script>
+  const id = location.hash.slice(1);
+  if (/^\d{5,25}$/.test(id)) {
+    const pin = document.getElementById("pin");
+    pin.href = "https://www.pinterest.com/pin/" + id + "/";
+    pin.setAttribute("data-pin-do", "embedPin");
+    pin.setAttribute("data-pin-width", "medium");
+    pin.setAttribute("data-pin-terse", "true");
+    const loader = document.createElement("script");
+    loader.async = true;
+    loader.src = "https://assets.pinterest.com/js/pinit.js";
+    document.body.append(loader);
+  }
+</script>
+</body>
+</html>

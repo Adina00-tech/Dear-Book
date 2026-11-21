@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#e7ece8">
+  <title>DearBook · бета — личный дневник</title>
+  <link rel="stylesheet" href="aqua.css">
+  <link rel="stylesheet" href="mood-theme.css">
+  <link rel="stylesheet" href="feeling-notes.css">
+  <link rel="stylesheet" href="atmosphere.css">
+  <link rel="stylesheet" href="pinterest-mood.css">
+  <link rel="stylesheet" href="editorial-board.css">
+  <script defer src="engine.js"></script>
+  <script defer src="song-vibe.js"></script>
+  <script defer src="mood-theme.js"></script>
+  <script defer src="editorial-assets.js"></script>
+  <script defer src="photo-style.js"></script>
+  <script defer src="editorial-board.js"></script>
+  <script defer src="references.js"></script>
+  <script defer src="demos.js"></script>
+  <script defer src="demo-video.js"></script>
+  <script defer src="pinterest-mood.js"></script>
+  <script defer src="feeling-narrative.js"></script>
+  <script defer src="atmosphere-quiz.js"></script>
+  <script defer src="atmosphere-profile.js"></script>
+  <script defer src="atmosphere-ai.js"></script>
+  <script defer src="atmosphere-diary.js"></script>
+  <script defer src="diary.js"></script>
+</head>
+<body>
+  <header class="toolbar">
+    <div class="toolbar-inner">
+      <a class="brand" href="#top" aria-label="DearBook, главная"><span class="brand-orb" aria-hidden="true"></span>DearBook<span class="brand-rule"></span><span class="brand-small">бета-версия</span></a>
+      <nav aria-label="Дневник">
+        <a class="tab active" id="composeTab" href="#top">Новая запись</a><a class="tab" href="#archive">Архив <span id="count" class="count"></span></a>
+      </nav>
+    </div>
+  </header>
+  <main id="top" class="shell">
+    <section class="window" aria-label="Новая запись">
+      <div class="window-bar"><span class="lights" aria-hidden="true"><i></i><i></i><i></i></span><span>Новая запись</span><time id="today"></time></div>
+      <div class="compose-layout">
+        <div class="entry">
+          <div class="kicker"><span class="small-orb"></span>Личный дневник</div>
+          <h1>Как прошёл<br>твой день?</h1>
+          <p class="intro">Оставь пару строк, фотографии и песню. Посмотри, какого цвета был этот день.</p>
+          <div class="compose-quiz"><button id="openAtmosphere" class="silver" type="button">Описать день образами</button><span id="atmosphereState" class="quiz-composer-state" aria-live="polite"></span></div>
+          <form id="entryForm">
+            <div class="editor">
+              <label class="sr-only" for="story">Как прошёл день</label>
+              <textarea id="story" rows="3" maxlength="5000" placeholder="Например, мы гуляли под дождём, а потом долго сидели у окна…"></textarea>
+              <span id="storyCount" class="story-count" aria-hidden="true">0 / 5000</span>
+            </div>
+            <div class="media-row">
+              <input id="photos" type="file" accept="image/*" multiple hidden>
+              <button class="silver media-button" id="photoButton" type="button"><span class="icon-photo" aria-hidden="true"></span><span id="photoLabel">Добавить фото</span></button>
+              <button class="silver media-button" id="songButton" type="button"><span class="icon-song" aria-hidden="true">♫</span><span id="songLabel">Добавить песню</span></button>
+            </div>
+            <div id="photoStrip" class="photo-strip" hidden></div>
+            <div id="songPreview" class="song-preview" hidden></div>
+            <p id="entryStatus" class="status" role="status"></p>
+            <div class="actions"><button id="create" class="aqua" type="submit">Собрать воспоминание <span aria-hidden="true">→</span></button><button id="loadExample" class="text-button" type="button">Заполнить примером</button><button id="resetEntry" class="text-button" type="button" hidden>Очистить форму</button></div>
+          </form>
+        </div>
+        <aside class="color-panel" aria-label="Цветовой круг">
+          <h2>Цветовой круг</h2>
+          <div id="wheel" class="wheel" aria-hidden="true"><div class="wheel-face"></div><div class="wheel-center"><span></span></div></div>
+          <div id="wheelHint" class="wheel-hint" aria-live="polite">Круг меняется вместе с записью</div>
+          <div id="legend" class="legend"></div>
+        </aside>
+      </div>
+    </section>
+    <section id="result" class="result" aria-labelledby="resultTitle" hidden></section>
+    <section id="archive" class="archive" aria-labelledby="archiveTitle">
+      <div class="section-head">
+        <div><h2 id="archiveTitle">Архив дней</h2><p>Открой запись, чтобы снова увидеть её цвета и услышать песню.</p></div>
+        <div class="archive-controls"><label class="sr-only" for="query">Поиск по архиву</label><input id="query" type="search" placeholder="Найти день"><button id="makeVideo" class="silver" type="button" hidden>Скачать видеопоказ</button></div>
+      </div>
+      <p id="archiveStatus" class="status" role="status"></p>
+      <div id="folders" class="folders"></div>
+    </section>
+    <footer><span>DearBook · бета</span><span>Записи хранятся в этом браузере</span></footer>
+  </main>
+  <dialog id="atmosphereDialog" class="quiz-dialog" aria-label="Атмосфера дня"><div id="atmosphereQuiz"></div></dialog>
+  <dialog id="musicDialog" class="music-dialog" aria-labelledby="musicTitle">
+    <div class="window-bar"><span>Песня дня</span><button type="button" id="closeMusic" class="close" aria-label="Закрыть">×</button></div>
+    <form id="musicForm" class="music-form">
+      <h2 id="musicTitle">Добавь песню</h2>
+      <p>Её темп и характер будут слышны в ритме и видны в цвете.</p>
+      <div class="source-switch" role="group" aria-label="Источник песни">
+        <label><input type="radio" name="source" value="file" checked> Аудиофайл</label><label><input type="radio" name="source" value="link"> Ссылка на трек</label>
+      </div>
+      <div id="audioFields" class="music-fields">
+        <label>Свой звук или аудио со свободной лицензией<input id="audioFile" type="file" accept="audio/*,.mp3,.m4a,.ogg,.wav,.flac,.aac"></label>
+        <small>Дневник слушает темп, громкость и тембр прямо в браузере.</small>
+      </div>
+      <div id="linkFields" class="music-fields" hidden>
+        <label>Ссылка на песню<input id="trackUrl" type="url" placeholder="https://…"></label>
+        <label>Название и исполнитель<input id="trackTitle" maxlength="140" placeholder="Название — исполнитель"></label>
+        <div class="track-grid">
+          <label>Темп<select id="trackTempo"><option value="">Выбрать</option><option value="72">Медленный</option><option value="104">Средний</option><option value="144">Быстрый</option></select></label>
+          <label>Энергия<select id="trackEnergy"><option value="">Выбрать</option><option value="0.21">Тихая</option><option value="0.50">Умеренная</option><option value="0.84">Напористая</option></select></label>
+          <label>Характер<select id="trackTone"><option value="">Выбрать</option><option value="warm">Тёплый</option><option value="neutral">Нейтральный</option><option value="cool">Холодный</option></select></label>
+        </div>
+        <small>Укажи, как звучит песня. По ссылке дневник использует это описание.</small>
+      </div>
+      <p id="musicStatus" class="status" role="status"></p>
+      <div class="music-actions"><button id="saveMusic" class="aqua" type="submit">Использовать песню</button><button id="removeMusic" class="text-button" type="button" hidden>Убрать песню</button></div>
+    </form>
+  </dialog>
+</body>
+</html>

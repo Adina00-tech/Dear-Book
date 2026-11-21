@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Стекло, бумага и туман — DearBook</title>
+  <link rel="stylesheet" href="aqua.css">
+  <link rel="stylesheet" href="mood-theme.css">
+  <link rel="stylesheet" href="pinterest-mood.css">
+  <link rel="stylesheet" href="editorial-board.css">
+  <style>
+    .board{padding:37px 0 55px}.board-intro{display:grid;grid-template-columns:minmax(0,1fr) 315px;gap:28px;align-items:end;margin-bottom:20px}.board-eyebrow{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.17em;font-weight:700}.board h1{font-size:clamp(42px,6.4vw,83px);line-height:.91;letter-spacing:-.081em;margin:10px 0 13px;font-weight:680}.board-lead{color:var(--muted);max-width:650px;font-size:14px}.board-listen{padding:14px 15px 12px;border:1px solid var(--m-rim);border-radius:9px;background:linear-gradient(var(--m-surface),var(--m-panel));box-shadow:inset 0 1px var(--m-shine),0 2px 5px #28332a17}.board-listen h2{font-size:18px;letter-spacing:-.035em}.board-listen p{color:var(--muted);font-size:12px;margin-top:2px}.board-listen audio{width:100%;height:36px;margin-top:9px;display:block}.board-pics{display:grid;grid-template-columns:minmax(0,.74fr) minmax(0,1.26fr);gap:12px}.board-pics figure{margin:0;min-width:0}.picture-button{cursor:zoom-in;display:block;width:100%;border:1px solid var(--m-rim);border-radius:9px;overflow:hidden;background:var(--m-chrome);padding:0;box-shadow:0 2px 6px #28332a2b}.picture-button img{display:block;width:100%;height:clamp(230px,38vw,414px);object-fit:cover;object-position:top center}.board-pics figure:nth-child(2) img{object-fit:contain;object-position:center;background:#e4e4e4}.board-pics figcaption{padding:9px 2px 2px;font-size:12px;color:var(--muted)}.board-pics figcaption strong{color:var(--ink);display:block}.board-sub{margin:25px 0 10px;font-size:25px;letter-spacing:-.045em}.board-colors{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.board-color{min-width:0;padding:9px;border-radius:7px;border:1px solid var(--m-line);background:var(--m-surface);font-size:12px}.board-color i{display:block;height:36px;border:1px solid #242a2a22;border-radius:5px;background:var(--swatch);margin-bottom:6px}.board-color strong{display:block;font-size:13px}.board-color code{color:var(--muted);font:11px monospace}.board-color p{margin:6px 0 3px}.board-color small{color:var(--muted);font-size:11px}.audio-notes{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(220px,1fr);gap:14px;padding:15px;border:1px solid var(--m-rim);border-radius:8px;background:var(--m-panel);font-size:13px}.audio-notes h3{margin-bottom:5px}.audio-notes small{display:block;color:var(--muted);margin-top:7px}.audio-notes dl{margin:0;padding:0}.audio-notes dt{font-weight:700}.audio-notes dd{margin:0 0 6px;color:var(--muted)}.image-dialog{max-width:min(980px,calc(100% - 24px));width:max-content;padding:0;overflow:hidden;border:1px solid var(--m-rim);border-radius:8px;color:var(--ink);background:var(--m-surface)}.image-dialog::backdrop{background:#18221ed1}.image-dialog img{display:block;max-width:100%;max-height:82vh;object-fit:contain;margin:auto}.image-dialog form{margin:0}.image-dialog .window-bar{grid-template-columns:1fr auto}.board footer{margin-top:22px}
+    @media(max-width:720px){.board{padding-top:21px}.board-intro{grid-template-columns:1fr;gap:12px}.board-listen{max-width:390px}.board-pics{grid-template-columns:1fr 1.3fr;gap:7px}.picture-button img{height:clamp(145px,41vw,280px)}.board-colors{grid-template-columns:repeat(2,minmax(0,1fr))}.audio-notes{grid-template-columns:1fr}.board h1{font-size:clamp(36px,8.15vw,64px)}}
+    .board-color .board-color-detail{border-top:1px solid var(--m-line);padding-top:6px;margin-top:7px;color:var(--muted);font-size:11px;line-height:1.4}
+  </style>
+  <script src="mood-theme.js" defer></script>
+  <script src="editorial-assets.js" defer></script>
+  <script src="photo-style.js" defer></script>
+  <script src="editorial-board.js" defer></script>
+  <script src="references.js" defer></script>
+  <script src="pinterest-mood.js" defer></script>
+  <script src="reference-view.js" defer></script>
+</head>
+<body>
+  <header class="toolbar"><div class="toolbar-inner"><a class="brand" href="index.html"><span class="brand-orb" aria-hidden="true"></span>DearBook</a><nav aria-label="Дневник"><a class="tab" href="index.html">← В дневник</a></nav></div></header>
+  <main class="shell board">
+    <header class="board-intro">
+      <div><p class="board-eyebrow">Демонстрационный мудборд</p><h1 id="boardTitle">Стекло, бумага<br>и туман</h1><p id="boardLead" class="board-lead"></p></div>
+      <section class="board-listen" aria-labelledby="boardTrackTitle"><h2 id="boardTrackTitle">Пауза между окнами</h2><p>Оригинальная аудиозарисовка · 76 BPM</p><audio id="boardAudio" controls preload="metadata"></audio></section>
+    </header>
+    <div id="boardPictures" class="reference-editorial"></div>
+    <h2 class="board-sub">Почему эти цвета</h2>
+    <div id="boardColors" class="board-colors"></div>
+    <div id="boardPins" class="reference-pins"></div>
+    <h2 class="board-sub">Как звучит этот мудборд</h2>
+    <section class="audio-notes">
+      <div><h3 id="boardVibeTitle"></h3><p id="boardVibeCopy"></p><small id="boardVibeEvidence"></small></div>
+      <dl><dt>Медленный пульс</dt><dd>Оставляет паузы между бытовыми деталями и видами улицы.</dd><dt>Стеклянный призвук</dt><dd>Напоминает тихий свет за мокрым окном.</dd><dt>Приглушённый щелчок</dt><dd>Звучит как момент, когда телефон ловит кадр.</dd></dl>
+    </section>
+    <footer><span>DearBook</span><span>Фото из публичных пинов</span></footer>
+  </main>
+
+</body>
+</html>

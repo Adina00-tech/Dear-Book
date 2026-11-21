@@ -1,0 +1,22 @@
+/* Read the feeling before browsing the visual references. */
+.feeling-band{padding:19px 30px 21px;background:var(--m-panel,#eef4ed);border-bottom:1px solid var(--m-line,#d6e1d5)}
+.feeling-band h3{font-size:20px;letter-spacing:-.035em}.feeling-band p{overflow-wrap:anywhere}
+.feeling-flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:9px;font-size:12px}
+.feeling-flow .feeling-beat{padding:5px 9px;border:1px solid var(--m-line,#c5d3c7);border-radius:5px;background:var(--m-surface,#f8fbf8);color:var(--ink);font-weight:650}
+.feeling-arrow{color:var(--teal);font-weight:700}
+.feeling-layers{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:8px;margin-top:10px}
+.feeling-layer{border-left:2px solid var(--m-button-rim,#6b9387);padding:3px 10px 5px}
+.feeling-layer strong{display:block;font-size:12px;line-height:1.2}
+.feeling-layer p{margin-top:4px;line-height:1.45;font-size:12px;color:var(--muted)}
+.palette-prompt{font-size:12px;color:var(--muted);margin:5px 0 0}
+.palette-list{gap:1px}
+.palette-row{padding:10px 0 12px}
+.palette-row>i{height:49px}
+.palette-context{min-width:0}
+.palette-meta{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 7px}
+.palette-meta code{font:10px "Lucida Console",monospace;color:var(--muted)}
+.palette-role{font-size:9px;line-height:1.2;padding:2px 5px;border:1px solid var(--m-line,#c8d6ca);border-radius:4px;color:var(--muted);background:var(--m-panel,#eef4ed)}
+.palette-row .palette-meaning{font-weight:650;margin-top:4px;line-height:1.4}
+:root[data-ambience] .palette-row .palette-evidence{color:var(--muted);font-size:12px;line-height:1.45;margin-top:4px;overflow-wrap:anywhere}
+:root[data-ambience] .palette-row .palette-detail{color:var(--muted);font-size:11px;line-height:1.4;margin-top:3px;overflow-wrap:anywhere}
+@media(max-width:650px){.feeling-band{padding:15px 16px}.feeling-layers{grid-template-columns:1fr}.feeling-band h3,.feeling-layer strong{line-height:1.25}}
