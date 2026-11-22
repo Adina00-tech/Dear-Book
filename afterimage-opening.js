@@ -47,8 +47,11 @@ const AfterimageOpening = (() => {
     if (opening.dialog.open && typeof opening.dialog.close === "function") opening.dialog.close();
     opening.dialog.remove();
     if (!opening.hadScrollLock) document.documentElement.classList.remove("afterimage-opening-lock");
-    if (opening.previous?.isConnected) opening.previous.focus({preventScroll: true});
-    if (reveal && typeof opening.onReveal === "function") opening.onReveal();
+    if (reveal && typeof opening.onReveal === "function") {
+      opening.onReveal();
+    } else if (opening.previous?.isConnected) {
+      opening.previous.focus({preventScroll: true});
+    }
   }
 
   function open(day, {number, onReveal} = {}) {

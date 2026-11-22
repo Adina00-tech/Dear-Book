@@ -647,12 +647,19 @@ function showResult(day, scroll = true) {
     onSave:day.demo ? undefined : (reflection) => saveReflection(day, reflection)
   });
   memory.append(content, letters, PinterestMood.section(day,(pin) => addDayPin(day,pin)));
-  $("result").replaceChildren(memory);
-  $("result").hidden = false;
+  const resultSection = $("result");
+  resultSection.replaceChildren(memory);
+  resultSection.hidden = false;
   if (scroll) {
-    $("result").scrollIntoView({behavior:motion.matches ? "instant" : "smooth", block:"start"});
-    h2.setAttribute("tabindex", "-1");
-    h2.focus({preventScroll:true});
+    h2.tabIndex = -1;
+    // Let the page lay out the album after the opening dialog releases the scroll lock.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (!memory.isConnected || document.querySelector("dialog.afterimage-opening[open]")) return;
+        h2.focus({preventScroll:true});
+        resultSection.scrollIntoView({behavior:"instant", block:"start"});
+      });
+    });
   }
 }
 
