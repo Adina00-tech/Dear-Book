@@ -356,6 +356,38 @@ function archiveDays() {
   return personal.concat(state.reference ? [state.reference] : [], state.examples);
 }
 
+function openMemory(day) {
+  const captureOrder = archiveDays().sort((a,b) =>
+    (Number(a.created) || 0) - (Number(b.created) || 0) ||
+    a.date.localeCompare(b.date) || String(a.id).localeCompare(String(b.id)));
+  const number = Math.max(1, captureOrder.findIndex((entry) => entry.id === day.id) + 1);
+  AfterimageOpening.open(day, {number, onReveal: () => showResult(day)});
+}
+
+function renderMemoryNavigation() {
+  const days = archiveDays();
+  const cover = $("afterimageCover");
+  const recent = days[0];
+  if (recent && recent.pictures[0] && cover.dataset.day !== String(recent.id)) {
+    const button = node("button", "afterimage-home__preview");
+    button.type = "button";
+    const image = node("img", "afterimage-home__photo");
+    image.src = recent.pictures[recent.reference ? 1 : 0]?.data || recent.pictures[0].data;
+    image.alt = "";
+    const caption = node("span", "afterimage-home__caption");
+    const date = node("time", "", dateLabel(recent.date, fullDate));
+    date.dateTime = recent.date;
+    caption.append(node("span", "", recent.demo ? "Пример воспоминания" : "Последнее воспоминание"),
+      node("strong", "", recent.title), date);
+    button.append(image, caption);
+    button.addEventListener("click", () => openMemory(recent));
+    cover.replaceChildren(button);
+    cover.dataset.day = String(recent.id);
+    cover.removeAttribute("aria-hidden");
+  }
+  AfterimageRevisit.render($("afterimageRevisit"), days, {onOpen:openMemory});
+}
+
 function renderArchive() {
   const query = $("query").value.trim().toLocaleLowerCase("ru");
   const all = archiveDays();
@@ -376,8 +408,10 @@ function renderArchive() {
     const palette = node("span", "folder-palette");
     palette.append(...(day.quizPalette || day.result.palette.map(({hex}) => hex)).map((hex) => chip(hex)));
     body.append(meta, node("span", "folder-title", day.title), palette);
-    card.append(image, body);
-    card.addEventListener("click", () => showResult(day));
+    const frame = node("span", "afterimage-folder-frame");
+    frame.append(image);
+    card.append(frame, body);
+    card.addEventListener("click", () => openMemory(day));
     return card;
   });
   $("folders").replaceChildren(...(buttons.length ? buttons : [node("p","empty",query ? "Ничего не найдено." : "Здесь появятся сохранённые дни.")]));
@@ -408,6 +442,19 @@ async function saveAtmosphereReading(day,reading) {
   if (state.current === day) showResult(day,false);
 }
 
+async function saveReflection(day, reflection) {
+  if (!state.storageReady) return false;
+  const previous = day.reflection;
+  day.reflection = reflection;
+  try {
+    await dbAction("readwrite", (store) => store.put(day));
+    return true;
+  } catch {
+    day.reflection = previous;
+    return false;
+  }
+}
+
 function atmosphereColors(profile, ai, fallback) {
   if (!profile?.palette?.length) return fallback;
   const notes = Array.isArray(ai?.paletteNotes) ? ai.paletteNotes : [];
@@ -418,6 +465,9 @@ function atmosphereColors(profile, ai, fallback) {
 }
 
 function showResult(day, scroll = true) {
+  const preservedLetters = !scroll && state.current === day
+    ? $("result").querySelector(".afterimage-reflection")
+    : null;
   state.current = day;
   state.voiceRun++;
   if ("speechSynthesis" in window) speechSynthesis.cancel();
@@ -436,7 +486,7 @@ function showResult(day, scroll = true) {
   clearTimeout(state.previewTimer);
   MoodTheme.apply(document.documentElement,themed,songVibe);
   paintWheel(themed,"Палитра открытой записи");
-  const memory = node("article", "memory");
+  const memory = node("article", scroll ? "memory afterimage-develop" : "memory");
   const hero = node("div", "memory-top");
   hero.style.setProperty("--accent", palette[0].hex);
   hero.style.setProperty("--fade", composition.transition + "s");
@@ -593,7 +643,10 @@ function showResult(day, scroll = true) {
   const band = profile ? AtmosphereDiary.renderSection(day,profile,ai,(reading) => saveAtmosphereReading(day,reading),songVibe) : feelingBand(feelings);
   if (band) memory.append(band);
   if (day.reference) memory.append(EditorialBoard.section(day));
-  memory.append(content,PinterestMood.section(day,(pin) => addDayPin(day,pin)));
+  const letters = preservedLetters || AfterimageReflection.section(day, {
+    onSave:day.demo ? undefined : (reflection) => saveReflection(day, reflection)
+  });
+  memory.append(content, letters, PinterestMood.section(day,(pin) => addDayPin(day,pin)));
   $("result").replaceChildren(memory);
   $("result").hidden = false;
   if (scroll) {
@@ -772,7 +825,7 @@ async function buildFolder(day) {
     '<h2>Почему эти цвета</h2><ul>' + palette + '</ul>' + PinterestMood.exportHtml(day, escapeHtml) +
     '<h2>Песня дня</h2><p>' + escapeHtml(day.track.title) +
     '</p>' + player + vibeHTML + '<details><summary>Запись дня</summary><p style="white-space:pre-wrap">' +
-    escapeHtml(written) + '</p></details></main></html>';
+    escapeHtml(written) + '</p></details>' + AfterimageReflection.exportHtml(day,escapeHtml) + '</main></html>';
   files.push([root + "Воспоминание.html", html]);
   files.push([root + "Пины Pinterest.txt", PinterestMood.exportLinks(day)]);
   return zipFiles(files);
@@ -932,8 +985,9 @@ function bindEvents() {
         state.pictures.length === day.pictures.length && state.pictures.every((picture,index)=>picture === day.pictures[index]);
       if (unchanged) clearEntryDraft();
       renderArchive();
-      showResult(day);
-      status("entryStatus", saved ? "Запись сохранена в архиве." : "Запись открыта в этой вкладке. Скачай папку, чтобы сохранить её.", !saved);
+      renderMemoryNavigation();
+      openMemory(day);
+      status("entryStatus", saved ? "Запись сохранена в архиве." : "Запись доступна в этой вкладке. Скачай папку, чтобы сохранить её.", !saved);
       $("create").disabled = false;
     }
   });
@@ -980,8 +1034,10 @@ function bindEvents() {
 }
 
 function updateTabs() {
-  for (const tab of document.querySelectorAll(".tab")) {
-    const active = tab.getAttribute("href") === (location.hash === "#archive" ? "#archive" : "#top");
+  const sections = ["#home", "#archive", "#create-memory", "#revisit"];
+  const section = sections.includes(location.hash) ? location.hash : "#home";
+  for (const tab of document.querySelectorAll(".toolbar nav .tab")) {
+    const active = tab.getAttribute("href") === section;
     tab.classList.toggle("active", active);
     if (active) tab.setAttribute("aria-current", "location");
     else tab.removeAttribute("aria-current");
@@ -1063,6 +1119,7 @@ async function init() {
   });
   await Promise.all([database, examples]);
   renderArchive();
+  renderMemoryNavigation();
   $("create").disabled = false;
 }
 

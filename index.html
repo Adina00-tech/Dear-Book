@@ -11,6 +11,10 @@
   <link rel="stylesheet" href="atmosphere.css">
   <link rel="stylesheet" href="pinterest-mood.css">
   <link rel="stylesheet" href="editorial-board.css">
+  <link rel="stylesheet" href="afterimage.css">
+  <link rel="stylesheet" href="afterimage-opening.css">
+  <link rel="stylesheet" href="afterimage-revisit.css">
+  <link rel="stylesheet" href="afterimage-reflections.css">
   <script defer src="engine.js"></script>
   <script defer src="song-vibe.js"></script>
   <script defer src="mood-theme.js"></script>
@@ -26,24 +30,38 @@
   <script defer src="atmosphere-profile.js"></script>
   <script defer src="atmosphere-ai.js"></script>
   <script defer src="atmosphere-diary.js"></script>
+  <script defer src="afterimage-opening.js"></script>
+  <script defer src="afterimage-revisit.js"></script>
+  <script defer src="afterimage-reflections.js"></script>
   <script defer src="diary.js"></script>
 </head>
 <body>
   <header class="toolbar">
     <div class="toolbar-inner">
-      <a class="brand" href="#top" aria-label="DearBook, главная"><span class="brand-orb" aria-hidden="true"></span>DearBook<span class="brand-rule"></span><span class="brand-small">бета-версия</span></a>
-      <nav aria-label="Дневник">
-        <a class="tab active" id="composeTab" href="#top">Новая запись</a><a class="tab" href="#archive">Архив <span id="count" class="count"></span></a>
+      <a class="brand afterimage-brand" href="#home" aria-label="AFTERIMAGE, главная"><span class="brand-orb" aria-hidden="true"></span>AFTERIMAGE</a>
+      <nav aria-label="Дневник" lang="en">
+        <a class="tab active" href="#home" aria-current="location">Home</a>
+        <a class="tab" href="#archive">My Memories <span id="count" class="count"></span></a>
+        <a class="tab" id="composeTab" href="#create-memory">Create a Memory</a>
+        <a class="tab" href="#revisit">Revisit a Day</a>
       </nav>
     </div>
   </header>
   <main id="top" class="shell">
-    <section class="window" aria-label="Новая запись">
+    <section id="home" class="afterimage-home" aria-labelledby="homeTitle">
+      <div class="afterimage-home__copy">
+        <h1 id="homeTitle">Как запомнился день?</h1>
+        <p>Собери из фото, песни и ощущений воспоминание, к которому захочется вернуться.</p>
+        <a class="aqua afterimage-home__action" href="#create-memory">Создать воспоминание <span aria-hidden="true">↓</span></a>
+      </div>
+      <div id="afterimageCover" class="afterimage-home__cover" aria-hidden="true"></div>
+    </section>
+    <section id="create-memory" class="window" aria-labelledby="composeTitle">
       <div class="window-bar"><span class="lights" aria-hidden="true"><i></i><i></i><i></i></span><span>Новая запись</span><time id="today"></time></div>
       <div class="compose-layout">
         <div class="entry">
           <div class="kicker"><span class="small-orb"></span>Личный дневник</div>
-          <h1>Как прошёл<br>твой день?</h1>
+          <h2 id="composeTitle" class="afterimage-compose-title">Как прошёл<br>твой день?</h2>
           <p class="intro">Пройди тест атмосферы, добавь фото и песню. Если хочется, допиши пару строк о дне.</p>
           <div class="compose-quiz"><button id="openAtmosphere" class="aqua" type="button" aria-describedby="atmosphereState">Пройти тест атмосферы</button><span id="atmosphereState" class="quiz-composer-state" aria-live="polite">Обязательный шаг · 10 вопросов</span></div>
           <form id="entryForm">
@@ -79,6 +97,12 @@
       </div>
       <p id="archiveStatus" class="status" role="status"></p>
       <div id="folders" class="folders"></div>
+    </section>
+    <section id="revisit" class="archive afterimage-revisit-section" aria-labelledby="revisitTitle">
+      <div class="section-head">
+        <div><h2 id="revisitTitle">Вернуться к дню</h2><p>Найди запись по дате или вспомни два дня рядом.</p></div>
+      </div>
+      <div id="afterimageRevisit"></div>
     </section>
     <footer><span>DearBook · бета</span><span>Записи хранятся в этом браузере</span></footer>
   </main>
