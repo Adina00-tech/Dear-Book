@@ -11,6 +11,7 @@ const state = {
   examples: [],
   reference: null,
   current: null,
+  deletion: null,
   photoJob: 0,
   loadingPhotos: false,
   previewTimer: 0,
@@ -368,7 +369,11 @@ function renderMemoryNavigation() {
   const days = archiveDays();
   const cover = $("afterimageCover");
   const recent = days[0];
-  if (recent && recent.pictures[0] && cover.dataset.day !== String(recent.id)) {
+  if (!recent?.pictures[0]) {
+    cover.replaceChildren();
+    delete cover.dataset.day;
+    cover.setAttribute("aria-hidden", "true");
+  } else if (cover.dataset.day !== String(recent.id)) {
     const button = node("button", "afterimage-home__preview");
     button.type = "button";
     const image = node("img", "afterimage-home__photo");
@@ -417,42 +422,120 @@ function renderArchive() {
   $("folders").replaceChildren(...(buttons.length ? buttons : [node("p","empty",query ? "Ничего не найдено." : "Здесь появятся сохранённые дни.")]));
 }
 
-async function addDayPin(day, id) {
-  const current = day.pinterest || PinterestMood.snapshot(day,state.entries);
-  const updated = {...current, extras:[...(current.extras || []),id]};
-  day.pinterest = updated;
-  if (day.demo || !state.storageReady) return false;
+function isPersonalMemory(day) {
+  return !day.demo && !day.reference && state.entries.includes(day);
+}
+
+function isDeletingMemory(day) {
+  return state.deletion?.pending && state.deletion.day === day;
+}
+
+async function updatePersonalMemory(day, fields) {
+  if (!state.storageReady || !isPersonalMemory(day) || isDeletingMemory(day)) return false;
   try {
-    await dbAction("readwrite", (store) => store.put(day));
-    return true;
+    const existing = await dbAction("readwrite", (store) => {
+      const request = store.get(day.id);
+      request.onsuccess = () => {
+        // A result arriving after deletion must never recreate the record.
+        if (request.result) store.put({...request.result, ...fields});
+      };
+      return request;
+    });
+    return Boolean(existing);
   } catch {
     return false;
   }
 }
 
+async function addDayPin(day, id) {
+  const current = day.pinterest || PinterestMood.snapshot(day,state.entries);
+  const updated = {...current, extras:[...(current.extras || []),id]};
+  day.pinterest = updated;
+  return updatePersonalMemory(day, {pinterest:updated});
+}
+
 async function saveAtmosphereReading(day,reading) {
+  if ((!isPersonalMemory(day) && !day.demo) || isDeletingMemory(day)) return;
   day.atmosphereAI = {...reading,interpretationVersion:2};
-  if (!day.demo && state.storageReady) {
-    try {
-      await dbAction("readwrite",(store) => store.put(day));
-    } catch {
-      status("archiveStatus","Интерпретация осталась в этой вкладке. Её можно скачать в папке дня.",true);
-    }
+  if (isPersonalMemory(day) && state.storageReady) {
+    const saved = await updatePersonalMemory(day, {atmosphereAI:day.atmosphereAI});
+    if (!isPersonalMemory(day) || isDeletingMemory(day)) return;
+    if (!saved) status("archiveStatus","Интерпретация осталась в этой вкладке. Её можно скачать в папке дня.",true);
   }
   if (state.current === day) showResult(day,false);
 }
 
 async function saveReflection(day, reflection) {
-  if (!state.storageReady) return false;
-  const previous = day.reflection;
+  if (!await updatePersonalMemory(day, {reflection})) return false;
   day.reflection = reflection;
+  return true;
+}
+
+function askToDeleteMemory(day) {
+  const dialog = $("deleteMemoryDialog");
+  if (!isPersonalMemory(day) || dialog.open) return;
+  state.deletion = {day, pending:false};
+  $("deleteMemoryName").textContent = day.title;
+  status("deleteMemoryStatus", "");
+  dialog.showModal();
+}
+
+async function deleteMemory(event) {
+  event.preventDefault();
+  const deletion = state.deletion;
+  if (!deletion || deletion.pending || !isPersonalMemory(deletion.day)) return;
+
+  const {day} = deletion;
+  deletion.pending = true;
+  $("confirmMemoryDelete").disabled = true;
+  $("cancelMemoryDelete").disabled = true;
+  status("deleteMemoryStatus", "Удаляем воспоминание…");
   try {
-    await dbAction("readwrite", (store) => store.put(day));
-    return true;
+    if (state.storageReady) await dbAction("readwrite", (store) => store.delete(day.id));
   } catch {
-    day.reflection = previous;
-    return false;
+    status("deleteMemoryStatus", "Не удалось удалить воспоминание. Попробуй ещё раз.", true);
+    return;
+  } finally {
+    deletion.pending = false;
+    $("confirmMemoryDelete").disabled = false;
+    $("cancelMemoryDelete").disabled = false;
   }
+
+  state.entries = state.entries.filter((entry) => entry.id !== day.id);
+  $("deleteMemoryDialog").close();
+  state.deletion = null;
+  if (state.current === day) {
+    stopMemoryPlayback();
+    state.current = null;
+    $("result").hidden = true;
+    $("result").replaceChildren();
+    updateWheel();
+  }
+  renderArchive();
+  renderMemoryNavigation();
+  if (location.hash !== "#archive") history.replaceState(history.state, "", "#archive");
+  updateTabs();
+  status("archiveStatus", "Воспоминание удалено.");
+  focusMemorySection($("archive"), $("archiveTitle"));
+}
+
+function focusMemorySection(section, heading) {
+  heading.tabIndex = -1;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      if (!heading.isConnected || document.querySelector("dialog[open]")) return;
+      heading.focus({preventScroll:true});
+      section.scrollIntoView({behavior:"instant", block:"start"});
+    });
+  });
+}
+
+function stopMemoryPlayback() {
+  state.voiceRun++;
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  $("result").querySelector("audio")?.pause();
+  if (state.playbackUrl) URL.revokeObjectURL(state.playbackUrl);
+  state.playbackUrl = "";
 }
 
 function atmosphereColors(profile, ai, fallback) {
@@ -469,11 +552,7 @@ function showResult(day, scroll = true) {
     ? $("result").querySelector(".afterimage-reflection")
     : null;
   state.current = day;
-  state.voiceRun++;
-  if ("speechSynthesis" in window) speechSynthesis.cancel();
-  $("result").querySelector("audio")?.pause();
-  if (state.playbackUrl) URL.revokeObjectURL(state.playbackUrl);
-  state.playbackUrl = "";
+  stopMemoryPlayback();
 
   const {result} = day;
   const songVibe = readingFor(day.track,day);
@@ -630,6 +709,12 @@ function showResult(day, scroll = true) {
     }
   });
   actions.append(download);
+  if (isPersonalMemory(day)) {
+    const remove = node("button", "silver delete-memory-button", "Удалить воспоминание");
+    remove.type = "button";
+    remove.addEventListener("click", () => askToDeleteMemory(day));
+    actions.append(remove);
+  }
   if (day.reference) {
     const openBoard = node("a", "silver open-board", "Открыть полный мудборд");
     openBoard.href = "Мудборд.html";
@@ -650,17 +735,7 @@ function showResult(day, scroll = true) {
   const resultSection = $("result");
   resultSection.replaceChildren(memory);
   resultSection.hidden = false;
-  if (scroll) {
-    h2.tabIndex = -1;
-    // Let the page lay out the album after the opening dialog releases the scroll lock.
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (!memory.isConnected || document.querySelector("dialog.afterimage-opening[open]")) return;
-        h2.focus({preventScroll:true});
-        resultSection.scrollIntoView({behavior:"instant", block:"start"});
-      });
-    });
-  }
+  if (scroll) focusMemorySection(resultSection, h2);
 }
 
 function speak(day, button, feedback) {
@@ -846,6 +921,16 @@ function switchMusicSource() {
 }
 
 function bindEvents() {
+  const deleteDialog = $("deleteMemoryDialog");
+  $("deleteMemoryForm").addEventListener("submit", deleteMemory);
+  $("cancelMemoryDelete").addEventListener("click", () => deleteDialog.close());
+  deleteDialog.addEventListener("cancel", (event) => {
+    if (state.deletion?.pending) event.preventDefault();
+  });
+  deleteDialog.addEventListener("close", () => {
+    if (!deleteDialog.open) state.deletion = null;
+  });
+
   $("story").addEventListener("input", () => {
     $("storyCount").textContent = $("story").value.length + " / 5000";
     status("entryStatus", "");

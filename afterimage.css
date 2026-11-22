@@ -244,3 +244,17 @@
     transform: none;
   }
 }
+
+.delete-memory-button,
+:root[data-ambience] .delete-memory-button {
+  color: var(--m-error, #973c3a);
+}
+
+.delete-memory-name {
+  font-weight: 680;
+  overflow-wrap: anywhere;
+}
+
+.delete-memory-dialog .music-actions button {
+  min-height: 44px;
+}

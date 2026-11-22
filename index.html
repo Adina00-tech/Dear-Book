@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="atmosphere.css">
   <link rel="stylesheet" href="pinterest-mood.css">
   <link rel="stylesheet" href="editorial-board.css">
-  <link rel="stylesheet" href="afterimage.css">
+  <link rel="stylesheet" href="afterimage.css?v=2">
   <link rel="stylesheet" href="afterimage-opening.css">
   <link rel="stylesheet" href="afterimage-revisit.css">
   <link rel="stylesheet" href="afterimage-reflections.css">
@@ -33,7 +33,7 @@
   <script defer src="afterimage-opening.js?v=2"></script>
   <script defer src="afterimage-revisit.js"></script>
   <script defer src="afterimage-reflections.js"></script>
-  <script defer src="diary.js?v=2"></script>
+  <script defer src="diary.js?v=3"></script>
 </head>
 <body>
   <header class="toolbar">
@@ -106,6 +106,18 @@
     </section>
     <footer><span>DearBook · бета</span><span>Записи хранятся в этом браузере</span></footer>
   </main>
+  <dialog id="deleteMemoryDialog" class="music-dialog delete-memory-dialog" aria-labelledby="deleteMemoryTitle" aria-describedby="deleteMemoryName deleteMemoryNote">
+    <form id="deleteMemoryForm" method="dialog" class="music-form">
+      <h2 id="deleteMemoryTitle">Удалить воспоминание?</h2>
+      <p id="deleteMemoryName" class="delete-memory-name"></p>
+      <p id="deleteMemoryNote">Запись и её содержимое удалятся из архива в этом браузере.</p>
+      <p id="deleteMemoryStatus" class="status" role="status"></p>
+      <div class="music-actions">
+        <button id="cancelMemoryDelete" class="silver" type="button" autofocus>Отмена</button>
+        <button id="confirmMemoryDelete" class="silver delete-memory-button" type="submit">Удалить</button>
+      </div>
+    </form>
+  </dialog>
   <dialog id="atmosphereDialog" class="quiz-dialog" aria-label="Атмосфера дня"><div id="atmosphereQuiz"></div></dialog>
   <dialog id="musicDialog" class="music-dialog" aria-labelledby="musicTitle">
     <div class="window-bar"><span>Песня дня</span><button type="button" id="closeMusic" class="close" aria-label="Закрыть">×</button></div>
